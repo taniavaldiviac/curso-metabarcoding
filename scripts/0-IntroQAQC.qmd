@@ -1,15 +1,17 @@
 ---
-title: "Evaluación de calidad: FastQC y MultiQC"
+title: "Control de calidad QAQC"
 #subtitle: "24–28 de noviembre de 2025<br>Instituto de Ciencias del Mar y Limnología (UNAM)"
 format:
   html:
-    toc: true
-    toc-depth: 2
-    toc-location: left
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    #theme: cosmo
+    highlight-style: github
+    embed-resources: true
 execute:
   echo: false
   warning: false
-  message: false
 ---
 
 ## Objetivo
@@ -27,10 +29,26 @@ archivos FASTQ usando herramientas bioinformáticas.
 
 ## 1. Verificación de integridad
 
-Puedes usar la terminal para verificar los checksums de tus archivos:
+Es una **verificación de integridad** por *checksum*:
+
+-   Para cada archivo .fastq, generas un hash (una “huella” única de sus
+    bytes).
+
+-   Guardas esas huellas en un manifiesto (checksums.sha256).
+
+-   Luego shasum -a 256 -c checksums.sha256 recalcula la huella de cada
+    archivo presente y la compara con la esperada.
 
 ``` bash
-md5sum raw_fastqs/*.fastq
+find raw_fastqs -type f -name '*.fastq*' -print0 \
+  | sort -z \
+  | xargs -0 shasum -a 256 > checksums.sha256
+```
+
+Para verificar:
+
+``` bash
+shasum -a 256 -c checksums.sha256
 ```
 
 ## 2. Conteo de lecturas
@@ -46,6 +64,7 @@ for f in raw_fastqs/*.fastq; do echo -n "$(basename "$f")   "; expr $(wc -l < "$
 Instala FastQC y ejecuta:
 
 ``` bash
+mkdir fastqc_reports
 fastqc raw_fastqs/*.fastq -o fastqc_reports/
 ```
 

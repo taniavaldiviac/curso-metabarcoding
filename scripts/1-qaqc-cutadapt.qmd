@@ -1,47 +1,52 @@
 ---
-title: "Evaluación de calidad: FastQC y MultiQC"
+title: "QAQC y recorte de primers con Cutadapt"
 #subtitle: "24–28 de noviembre de 2025<br>Instituto de Ciencias del Mar y Limnología (UNAM)"
 format:
   html:
-    toc: true
-    toc-depth: 2
-    toc-location: left
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    #theme: cosmo
+    highlight-style: github
+    embed-resources: true
 execute:
   echo: false
   warning: false
-  message: false
 ---
 
-# FastQC y MultiQC
+# Evaluación de calidad: FastQC y MultiQC
 
-**Ejecutar FastQC sobre todos los .fastq**
+## 1. Crear directorios y correr fastqc
 
 ``` bash
 cd /metabarcoding-code/
-mkdir -p final_data/fastqc
-fastqc -q -t 4 -o final_data/fastqc raw_fastqs/*.fastq
+mkdir -p fastqc_reports
+mkdir -p multiqc_reports
+
+fastqc -q -t 4 -o fastqc_reports raw_fastqs/*.fastq
 ```
 
-**Verificar instalación y conteo de reportes**
+## 2. Verificar conteo de reportes
 
 ``` bash
-fastqc --version
-ls -1 final_data/fastqc/*_fastqc.html | wc -l
+ls -1 fastqc_reports/*_fastqc.html | wc -l
 ```
 
-**Ejecutar MultiQC (resume todos los FastQC)**
+## 3. Ejecutar MultiQC (resume todos los FastQC)
 
 ``` bash
-multiqc final_data/fastqc -o final_data/fastqc
-# Reporte: final_data/fastqc/multiqc_report.html
+multiqc fastqc_reports -o multiqc_reports
+# Reporte en multi_qc
 ```
 
-**Transferir el HTML al computador local (scp)**
+## 4. Transferir el HTML a la computadora local usando scp
 
-Desde tu terminal local:
+**Desde tu terminal local:**
 
 ``` bash
-scp user@server:/ruta/proyecto/final_data/fastqc/multiqc_report.html ~/Downloads/
+# Indica la ubicación de descarga en tu computadora
+scp CMetaXX@serverIP:/home/CMetaXX/metabarcoding-code/multiqc_reports/multiqc_report.html ~/Downloads/
+
 open ~/Downloads/multiqc_report.html
 ```
 
@@ -52,7 +57,7 @@ scp -r user@server:/ruta/proyecto/final_data/fastqc ~/fastqc_local/
 open ~/fastqc_local/multiqc_report.html
 ```
 
-Tips de revisión en MultiQC:
+**Tips de revisión en MultiQC:**
 
 \- Per base sequence quality: define zonas de truncado (Q≥25–30).
 
@@ -61,33 +66,46 @@ recorte.
 
 \- Length distribution: valida rango del amplicón esperado.
 
-# Cutadapt
+# Cortar primers con Cutadapt
 
-**Copia y da permisos**
+## Da permisos
 
 -   En el servidor:
 
 ``` bash
-chmod +x scripts/2-cutadapt.sh
+chmod +x scripts/cutadapt.sh
 ```
 
-**Ejecuta**
+## Define primers y ejecuta
 
 ``` bash
-bash scripts/2-cutadapt.sh
+bash scripts/cutadapt.sh
 ```
 
-**Resultados**
+## Resultados
 
 -   FASTQ recortados: for_dada2/
 -   Reportes por muestra: cutadapt_reports/\*\_cutadapt.txt
 -   Resumen: cutadapt_reports/overall_report.txt
 
-**Verificación post-recorte (opcional)**
+## Verificación post-recorte (opcional)
 
 ``` bash
-mkdir -p final_data/fastqc_trimmed
-fastqc -q -t 4 -o final_data/fastqc_trimmed for_dada2/*.fastq
-multiqc final_data/fastqc_trimmed -o final_data/fastqc_trimmed
-# Abre: final_data/fastqc_trimmed/multiqc_report.html
+mkdir -p fastqc_reports/fastqc_trimmed
+mkdir -p multiqc_reports/fastqc_trimmed
+
+fastqc -q -t 4 -o fastqc_reports/fastqc_trimmed for_dada2/*.fastq
+multiqc fastqc_reports/fastqc_trimmed -o multiqc_reports/fastqc_trimmed
+# Descarga en tu computadora con scp: final_data/fastqc_trimmed/multiqc_report.html
 ```
+
+Correcciones y notas del script
+
+\- Usa FWD (forward) y el RC del REV para -G (paired-end).
+
+\- No dependas de cambiar de carpeta; el script ya usa rutas claras.
+
+\- Crea directorios de salida antes de escribir.
+
+\- Convención requerida: Sample_R1.fastq y Sample_R2.fastq en
+raw_fastqs/.

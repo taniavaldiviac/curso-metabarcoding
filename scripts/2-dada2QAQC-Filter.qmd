@@ -1,16 +1,17 @@
 ---
-title: "Explicación del Pipeline dada2 - Paso Filter and Trim"
-author: "Tu Nombre"
-date: "`r Sys.Date()`"
+title: "Dada2 - Filter and Trim"
+#subtitle: "24–28 de noviembre de 2025<br>Instituto de Ciencias del Mar y Limnología (UNAM)"
 format:
   html:
-    toc: true
     toc-depth: 3
     code-fold: true
     code-tools: true
-    theme: cosmo
+    #theme: cosmo
     highlight-style: github
     embed-resources: true
+execute:
+  echo: false
+  warning: false
 ---
 
 # Introducción al paso Filter and Trim en dada2
