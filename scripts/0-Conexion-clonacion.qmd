@@ -1,0 +1,143 @@
+---
+title: "Conexión al servidor y clonación de repositorio Github"
+#subtitle: "24–28 de noviembre de 2025<br>Instituto de Ciencias del Mar y Limnología (UNAM)"
+format:
+  html:
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    #theme: cosmo
+    highlight-style: github
+    embed-resources: true
+execute:
+  echo: false
+  warning: false
+---
+
+## Conéctate al servidor desde tu computadora
+
+Abre la terminal en tu computadora e ingresa el siguiente comando
+(reemplaza `usuario` y `IP` por los datos que te proporcionen):
+
+``` sh
+ssh usuario@IP
+```
+
+Luego, cuando se te pida, escribe tu contraseña y presiona Enter.
+
+-   Si es la primera vez que te conectas, puede que te pregunte si
+    confías en el servidor. Escribe `yes` y presiona Enter.
+-   Una vez conectado, ya puedes seguir con los pasos siguientes
+    directamente en el servidor.
+
+## Pasos para reproducir el análisis
+
+### 1. Activa el entorno conda
+
+### ¿Qué es un entorno (environment) en conda?
+
+Un entorno (o environment) en conda es un espacio aislado donde puedes
+instalar versiones específicas de Python, R y otros paquetes, sin
+afectar el resto del sistema ni otros proyectos. Esto ayuda a evitar
+conflictos entre dependencias y facilita la reproducibilidad.
+
+Esto te asegura que todos los paquetes y programas que uses estarán
+dentro de ese entorno.
+
+``` sh
+conda activate r-bio
+```
+
+### Verifica qué paquetes hay en el entorno
+
+Para ver la lista de paquetes instalados en el entorno `r-bio`, ejecuta:
+
+``` sh
+conda list
+```
+
+Esto mostrará todos los paquetes y sus versiones dentro del entorno
+activo.
+
+### 3. Clona tu repositorio
+
+``` sh
+git clone https://github.com/taniavaldiviac/metabarcoding-code
+cd metabarcoding-code
+```
+
+## ¿Qué contiene este repositorio?
+
+El repositorio `curso-metabarcoding` está diseñado para enseñar y
+reproducir análisis de metabarcoding, integrando scripts, reportes y
+recursos para el procesamiento de datos de metabarcoding en DADA2.
+
+### Estructura principal
+
+-   `scripts/`: Scripts en bash, R y Quarto (.qmd) para automatizar
+    pasos del análisis, como recorte de secuencias, análisis de calidad
+    y generación de reportes.
+-   `raw_fastqs/`: Carpeta donde se almacenan los archivos de
+    secuenciación originales (FASTQ).
+-   `for_dada2/`: Carpeta de salida para archivos procesados, listos
+    para análisis con DADA2.
+-   `cutadapt_reports/`: Reportes generados por el preprocesamiento con
+    cutadapt.
+-   Otros archivos y carpetas: Pueden incluir datos de ejemplo, archivos
+    de configuración y documentación.
+
+### ¿Para qué sirve?
+
+-   Permite reproducir todo el flujo de trabajo de análisis de datos de
+    metabarcoding, desde la preparación de datos hasta la generación de
+    reportes finales.
+-   Incluye instrucciones para instalar dependencias, activar entornos,
+    clonar el repositorio y ejecutar los análisis paso a paso.
+-   Facilita la colaboración y la enseñanza, asegurando que todos
+    trabajen con los mismos scripts y versiones de paquetes.
+
+### 4. Abre R en el entorno conda
+
+``` sh
+R
+```
+
+### 5. Instala los paquetes CRAN y Bioconductor desde R
+
+``` r
+install.packages(c(
+  "RColorBrewer", "ape", "colorspace", "data.table", "dplyr", "filesstrings",
+  "ggforce", "ggplot2", "ggsci", "here", "insect", "kableExtra", "pander",
+  "pandoc", "pheatmap", "purrr", "readr", "rentrez", "scales", "seqinr",
+  "sqldf", "strex", "stringr", "svglite", "taxize", "tibble", "tidyr",
+  "tidyverse", "vegan", "viridis"
+))
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+BiocManager::install(c("ShortRead", "phyloseq", "dada2", "Biostrings"))
+```
+
+### 6. Si usas renv, restaura el entorno
+
+``` r
+renv::restore()
+```
+
+### 7. Si los paquetes base no se ven en renv, agrega la ruta de conda a `.libPaths()`
+
+``` r
+.libPaths(c(.libPaths(), "/home/bio/conda/envs/r-bio/lib/R/library"))
+.libPaths()
+```
+
+### 8. Renderiza el reporte Quarto
+
+``` sh
+quarto render scripts/Bienvenidos.qmd
+```
+
+------------------------------------------------------------------------
+
+| **Recuerda**
+| Usa la carpeta `metabarcoding-code` como tu proyecto.
+| Activa ambiente `r-bio` con conda\
+  Sigue estos pasos para reproducir el análisis y reporte en cualquier servidor.

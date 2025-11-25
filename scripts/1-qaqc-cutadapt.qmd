@@ -14,9 +14,55 @@ execute:
   warning: false
 ---
 
-# Evaluación de calidad: FastQC y MultiQC
+## Objetivo
 
-## 1. Crear directorios y correr fastqc
+En esta clase aprenderemos a realizar control de calidad (QA/QC) en
+archivos FASTQ usando herramientas bioinformáticas.
+
+### Pasos principales
+
+1.  **Verificación de integridad de archivos**
+2.  **Conteo de lecturas**
+3.  **Análisis de calidad con FastQC y MultiQC**
+4.  **Revisión de resultados**
+5.  **Cortar primers con cutadapt**
+6.  **Revisión de resultados**
+
+### **1. Verificación de integridad**
+
+Es una **verificación de integridad** por *checksum*:
+
+-   Para cada archivo .fastq, generas un hash (una “huella” única de sus
+    bytes).
+
+-   Guardas esas huellas en un manifiesto (checksums.sha256).
+
+-   Luego shasum -a 256 -c checksums.sha256 recalcula la huella de cada
+    archivo presente y la compara con la esperada.
+
+``` bash
+find raw_fastqs -type f -name '*.fastq*' -print0 \
+  | sort -z \
+  | xargs -0 shasum -a 256 > checksums.sha256
+```
+
+Para verificar:
+
+``` bash
+shasum -a 256 -c checksums.sha256
+```
+
+### 2. Conteo de lecturas
+
+Cada lectura ocupa 4 líneas en un archivo FASTQ. Para contar lecturas:
+
+``` bash
+for f in raw_fastqs/*.fastq; do echo -n "$(basename "$f")   "; expr $(wc -l < "$f") / 4; done > conteo_lecturas.tsv
+```
+
+### 3. Evaluación de calidad: FastQC y MultiQC
+
+### Crear directorios y correr fastqc
 
 ``` bash
 cd /metabarcoding-code/
@@ -26,20 +72,22 @@ mkdir -p multiqc_reports
 fastqc -q -t 4 -o fastqc_reports raw_fastqs/*.fastq
 ```
 
-## 2. Verificar conteo de reportes
+### Verificar conteo de reportes
 
 ``` bash
 ls -1 fastqc_reports/*_fastqc.html | wc -l
 ```
 
-## 3. Ejecutar MultiQC (resume todos los FastQC)
+### Ejecutar MultiQC (resume todos los FastQC)
 
 ``` bash
 multiqc fastqc_reports -o multiqc_reports
 # Reporte en multi_qc
 ```
 
-## 4. Transferir el HTML a la computadora local usando scp
+### 4. Revisión de resultados
+
+### Transferir el HTML a la computadora local usando scp
 
 **Desde tu terminal local:**
 
@@ -57,18 +105,43 @@ scp -r user@server:/ruta/proyecto/final_data/fastqc ~/fastqc_local/
 open ~/fastqc_local/multiqc_report.html
 ```
 
-**Tips de revisión en MultiQC:**
+| **Tips de revisión en MultiQC:**
+| - Per base sequence quality: define zonas de truncado (Q≥25–30).
+| - Adapter/Overrepresented/Primer content: confirma necesidad de recorte.
+| - Length distribution: valida rango del amplicón esperado.
 
-\- Per base sequence quality: define zonas de truncado (Q≥25–30).
+### 5. Cortar primers con Cutadapt
 
-\- Adapter/Overrepresented/Primer content: confirma necesidad de
-recorte.
+Este script `cutadapt.sh` es un pipeline automatizado en bash para
+recortar los primers de archivos de secuenciación paired-end usando la
+herramienta cutadapt.
 
-\- Length distribution: valida rango del amplicón esperado.
+1.  **Configura rutas y variables:** Define dónde están los archivos
+    originales (raw_fastqs), dónde guardar los archivos recortados
+    (for_dada2) y los reportes (cutadapt_reports). También define los
+    primers a recortar y otros parámetros (pueden modificarse).
+2.  **Verifica dependencias:** Busca que cutadapt esté instalado y que
+    existan los archivos necesarios.
+3.  **Busca los archivos FASTQ:** Localiza todos los archivos
+    \*\_R1_001.fastq y sus pares \*\_R2_001.fastq.
+4.  **Procesa cada muestra:**
+    -   Ejecuta cutadapt para recortar los primers de cada par de
+        archivos (R1 y R2).
+    -   Guarda los archivos recortados y un reporte individual para cada
+        muestra.
+    -   Extrae estadísticas clave del reporte (pares procesados, reads
+        con adaptador, reads escritos, porcentaje de éxito) y las resume
+        en archivos TXT y TSV.
+5.  **Resultados:**
+    -   Los archivos recortados quedan listos para análisis posteriores
+        (por ejemplo, DADA2).
+    -   Los reportes permiten revisar cuántas lecturas fueron recortadas
+        correctamente.
 
-# Cortar primers con Cutadapt
+| **¿Por qué es útil?**
+| Automatiza el preprocesamiento de datos de secuenciación. Permite ajustar parámetros fácilmente. Genera reportes claros para control de calidad.
 
-## Da permisos
+### Da permisos
 
 -   En el servidor:
 
@@ -76,19 +149,41 @@ recorte.
 chmod +x scripts/cutadapt.sh
 ```
 
-## Define primers y ejecuta
+Visualiza que hay en el archivo bash:
+
+``` bash
+cat scripts/cutadapt.sh
+```
+
+### Parámetros principales usados
+
+-   `-j ${THREADS}`: Número de hilos (procesos en paralelo) para
+    acelerar el procesamiento.
+-   `-g "^${FWD}"`: Primer a buscar al inicio de las lecturas R1 (el
+    símbolo \^ indica “al inicio”).
+-   `-G "^${ADAPTER_R2}"`: Primer a buscar al inicio de las lecturas R2.
+-   `-e ${ERROR_RATE}`: Tasa máxima de error permitida al buscar el
+    primer (por defecto 0.10, es decir, 10% de errores permitidos).
+-   `-m ${MIN_LEN}`: Longitud mínima de las lecturas después del recorte
+    (por defecto 40 bases).
+-   `--discard-untrimmed`: (Opcional) Si se activa, descarta las
+    lecturas donde no se encontró el primer.
+-   `-o ${out_R1}`: Archivo de salida para las lecturas R1 recortadas.
+-   `-p ${out_R2}`: Archivo de salida para las lecturas R2 recortadas.
+
+### Ejecuta
 
 ``` bash
 bash scripts/cutadapt.sh
 ```
 
-## Resultados
+### Obtendrás
 
 -   FASTQ recortados: for_dada2/
 -   Reportes por muestra: cutadapt_reports/\*\_cutadapt.txt
 -   Resumen: cutadapt_reports/overall_report.txt
 
-## Verificación post-recorte (opcional)
+### 6. Revisión de resultados
 
 ``` bash
 mkdir -p fastqc_reports/fastqc_trimmed
@@ -99,13 +194,8 @@ multiqc fastqc_reports/fastqc_trimmed -o multiqc_reports/fastqc_trimmed
 # Descarga en tu computadora con scp: final_data/fastqc_trimmed/multiqc_report.html
 ```
 
-Correcciones y notas del script
-
-\- Usa FWD (forward) y el RC del REV para -G (paired-end).
-
-\- No dependas de cambiar de carpeta; el script ya usa rutas claras.
-
-\- Crea directorios de salida antes de escribir.
-
-\- Convención requerida: Sample_R1.fastq y Sample_R2.fastq en
-raw_fastqs/.
+| **Notas del script**
+| - Usa FWD (forward) y el RC del REV para -G (paired-end).
+| - No dependas de cambiar de carpeta; el script ya usa rutas claras.
+| - Crea directorios de salida antes de escribir.
+| - Convención requerida: Sample_R1.fastq y Sample_R2.fastq en raw_fastqs/.

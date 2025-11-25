@@ -132,10 +132,10 @@ El objetivo es transformar lecturas crudas de secuenciación de alto rendimiento
 
 ## Ventajas de este pipeline
 
-✅ **Reproducible**: rutas relativas, parámetros documentados, sessionInfo guardado\
-✅ **Flexible**: procesa múltiples marcadores usando tabla de configuración ( ✅ **Robusto**: maneja archivos vacíos, valida inputs, protege contra errores\
-✅ **Trazable**: guarda logs detallados y gráficos de QC en cada paso\
-✅ **Listo para análisis**: outputs optimizados para phyloseq y análisis downstream
+*Reproducible**: rutas relativas, parámetros documentados, sessionInfo guardado\
+**Flexible**: procesa múltiples marcadores usando tabla de configuración ( ✅ **Robusto**: maneja archivos vacíos, valida inputs, protege contra errores\
+**Trazable**: guarda logs detallados y gráficos de QC en cada paso\
+**Listo para análisis**: outputs optimizados para phyloseq y análisis downstream
 
 ------------------------------------------------------------------------
 
@@ -147,4 +147,4 @@ El objetivo es transformar lecturas crudas de secuenciación de alto rendimiento
 4.  Ajusta `i <- 1` a la fila del marcador que quieres procesar
 5.  Ejecuta el script completo o por secciones
 
-**¡El pipeline está diseñado para aprender haciendo!** Cada sección está comentada para que entiendas qué hace y por qué.
+
