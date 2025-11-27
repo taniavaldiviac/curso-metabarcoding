@@ -11,6 +11,15 @@ library(taxize)
 library(dplyr)
 library(stringr)
 
+# Definir función fasta_to_df
+fasta_to_df <- function(fasta_path) {
+  seqs <- Biostrings::readDNAStringSet(fasta_path)
+  data.frame(
+    Title = names(seqs),
+    Sequence = as.character(seqs),
+    stringsAsFactors = FALSE
+  )
+}
 
 fasta_path <- "metadata/Amplicons_12S_virtualPCR_raw.fasta"
 df <- fasta_to_df(fasta_path)
