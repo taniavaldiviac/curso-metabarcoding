@@ -1,5 +1,8 @@
 docs/
 
+renv/
+renv.lock
+
 scripts/Report_files/
 
 # Ignorar contenido de final_data/ pero conservar estructura (.gitkeep)

@@ -14,8 +14,6 @@ execute:
 
 ## Paso 1. Activación de paquetes
 
-Activa `renv` si estás ejecutando con Rscript desde terminal
-
 ```{r}
 # Definición de rutas usando el root del proyecto
 # here::here() detecta automáticamente la raíz (donde está el .Rproj)
@@ -23,17 +21,13 @@ proj_root <- here::here()
 message("Proyecto detectado en: ", proj_root)
 
 # Fijar working directory a la raíz del proyecto
-# Esto es útil para código que no usa here() internamente y para Rscript
 setwd(proj_root)
 message("Working directory fijado a: ", proj_root)
-
-if (file.exists(file.path("renv", "activate.R"))) { source(file.path("renv", "activate.R")) }
 ```
 
 Cargar librerías
 
 ```{r}
-library(renv) 
 library(insect) 
 library(tidyverse) 
 library(Biostrings) 

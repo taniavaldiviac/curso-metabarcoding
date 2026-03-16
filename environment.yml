@@ -1,0 +1,64 @@
+name: metabarcoding
+
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+
+dependencies:
+  # ── Python y herramientas de terminal ──────────────────────────────────
+  - python=3.11
+  - cutadapt>=4.6          # control de calidad y remoción de adaptadores
+  - blast>=2.15            # asignación taxonómica por similitud
+  - multiqc                # reporte de calidad
+  - fastqc                 # calidad de reads
+
+  # ── R base ─────────────────────────────────────────────────────────────
+  - r-base=4.3             # R 4.3.x (compatible con DADA2 y phyloseq)
+  - r-essentials           # conjunto base de paquetes R para ciencia de datos
+
+  # ── Quarto (para renderizar reportes) ───────────────────────────────────
+  - quarto>=1.4
+
+  # ── Dependencias del sistema para compilar paquetes R ───────────────────
+  - libcurl
+  - openssl
+  - libxml2
+  - cairo
+  - pango
+  - harfbuzz
+  - fribidi
+  - libtiff
+  - libjpeg-turbo
+
+  # ── Paquetes R (CRAN) via conda-forge ───────────────────────────────────
+  - r-tidyverse            # dplyr, ggplot2, readr, tibble, tidyr, purrr, stringr
+  - r-vegan                # análisis de diversidad y ecología de comunidades
+  - r-ape                  # análisis filogenético
+  - r-pheatmap             # heatmaps
+  - r-rcolorbrewer         # paletas de color
+  - r-viridis              # escalas de color accesibles
+  - r-colorspace
+  - r-scales
+  - r-data.table
+  - r-kableextra           # tablas en reportes
+  - r-pander
+  - r-here                 # manejo de rutas relativas
+  - r-seqinr               # análisis de secuencias
+  - r-ggforce
+  - r-ggsci
+  - r-svglite
+  - r-sqldf
+  - r-taxize               # consultas taxonómicas a bases de datos
+  - r-rentrez              # acceso a NCBI/Entrez
+
+  # ── Paquetes Bioconductor via bioconda ──────────────────────────────────
+  - bioconductor-dada2     # pipeline principal del curso (ASVs)
+  - bioconductor-phyloseq  # análisis de comunidades microbianas/eucariontes
+  - bioconductor-biostrings
+  - bioconductor-shortread
+
+  # ── Pip (paquetes sin receta conda) ─────────────────────────────────────
+  - pip
+  - pip:
+    - insect               # clasificación taxonómica con redes neuronales (si se necesita)

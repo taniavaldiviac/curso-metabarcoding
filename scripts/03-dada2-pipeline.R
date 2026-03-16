@@ -1,13 +1,7 @@
 # dada2 QAQC 
 # Metabarcoding en comunidades de eucariontes
 
-## 
-# Auto-activar renv (útil cuando se ejecuta con Rscript en servidores sin RStudio)
-if (file.exists(file.path("renv","activate.R"))) {
-  source(file.path("renv","activate.R"))
-}
-renv::status()
-
+##
 # Cargamos librerías necesarias. Cada una se usa en distintas partes del pipeline.
 library(dada2, quietly = TRUE)     # pipeline principal
 library(tidyverse, quietly = TRUE) # manipulación de datos (incluye readr)

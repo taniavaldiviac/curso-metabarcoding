@@ -48,19 +48,7 @@ if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocMana
 BiocManager::install(c("ShortRead", "phyloseq", "dada2", "Biostrings"))
 ```
 
-### 7. Si usas renv, restaura el entorno
-
-```r
-renv::restore()
-```
-
-### 8. Si los paquetes base no se ven en renv, agrega la ruta de conda a `.libPaths()`
-
-```r
-.libPaths(c(.libPaths(), "/home/bio/envs/r-bio/lib/R/library"))
-```
-
-### 9. Renderiza tu reporte Quarto
+### 7. Renderiza tu reporte Quarto
 git push
 
 ```sh
