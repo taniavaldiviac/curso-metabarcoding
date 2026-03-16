@@ -1,67 +1,69 @@
-# Metabarcoding de comunidades de eucariontes, ICMyL-UNAM
+# Metabarcoding de comunidades de eucariontes
 
 ### Guía para el uso del repositorio metabarcoding-code
 
-Este instructivo te permite reproducir el análisis y el reporte de Quarto en cualquier servidor usando la carpeta `metabarcoding-code`.  
+Este repositorio contiene los scripts, datos y recursos para el curso de metabarcoding. Sigue estos pasos para reproducir el análisis en el servidor.
 
-## Pasos para reproducir el análisis
+---
 
-### 1. Instala Miniconda/Conda en el servidor (si no está instalado)
+## Pasos para comenzar
 
-### 2. Crea y activa el entorno conda
+### 1. Conéctate al servidor vía VPN + SSH
 
-```sh
-conda activate r-bio
-```
+Primero activa la VPN (Hillstone Secure Connect):
+- Servidor: `200.23.161.197`, puerto `4666`
+- Usuario: `BIO\tu_usuario`
 
-### 3. Instala los paquetes base de R y dependencias del sistema
-
-```sh
-conda install -c conda-forge libcurl
-```
-
-### 4. Clona tu repositorio
+Luego conéctate por SSH:
 
 ```sh
-git clone https://github.com/taniavaldiviac/metabarcoding-code/
-cd metabarcoding-code
-# git pull origin main
+ssh usrXX@200.23.162.240
 ```
 
-### 5. Abre R en el entorno conda
+### 2. Clona el repositorio en tu home
 
 ```sh
-R
+git clone https://github.com/taniavaldiviac/metabarcoding-code.git ~/metabarcoding-code
+cd ~/metabarcoding-code
 ```
 
-### 6. Instala los paquetes CRAN y Bioconductor desde R
+### 3. Copia los archivos FASTQ
+
+```sh
+cp /home/tvaldivia/metabarcoding-code/raw_fastqs/* ~/metabarcoding-code/raw_fastqs/
+```
+
+### 4. Verifica que los paquetes de R están disponibles
+
+Los paquetes necesarios ya están instalados en el servidor. Al abrir R, se cargan automáticamente gracias al archivo `~/.Rprofile`. Puedes verificar:
 
 ```r
-install.packages(c(
-  "RColorBrewer", "ape", "colorspace", "data.table", "dplyr", "filesstrings",
-  "ggforce", "ggplot2", "ggsci", "here", "insect", "kableExtra", "pander",
-  "pandoc", "pheatmap", "purrr", "readr", "rentrez", "scales", "seqinr",
-  "sqldf", "strex", "stringr", "svglite", "taxize", "tibble", "tidyr",
-  "tidyverse", "vegan", "viridis"
-))
-if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
-BiocManager::install(c("ShortRead", "phyloseq", "dada2", "Biostrings"))
+library(dada2)
+library(phyloseq)
+library(tidyverse)
 ```
 
-### 7. Renderiza tu reporte Quarto
-git push
+### 5. Ejecuta los scripts en orden
 
-```sh
-quarto render scripts/syllabus.qmd
+Los scripts están numerados en `scripts/`:
+
 ```
-10. Descarga en tu computadora
+01-conexion-servidor.qmd   — Conexión al servidor
+02-qaqc-fastqc.qmd         — Control de calidad con FastQC
+02b-cutadapt.sh            — Remoción de adaptadores con Cutadapt
+03-dada2-pipeline.R        — Pipeline DADA2 completo
+04-base-datos-ncbi.qmd     — Búsqueda de referencias en NCBI
+05-base-datos-pcr-virtual.qmd — PCR virtual
+06-base-datos-paso3.R      — Construcción de base de datos local
+07-reporte.qmd             — Reporte final
+```
+
+### 6. Renderiza el reporte Quarto
 
 ```sh
-scp usuario@servidor:/home/usuario/metabarcoding-code/scripts/syllabus.html .
-scp -r usuario@servidor:/home/usuario/metabarcoding-code/scripts/syllabus_files .
+quarto render scripts/07-reporte.qmd
 ```
 
 ---
 
-Usa la carpeta `metabarcoding-code` como tu proyecto.  
-Sigue estos pasos para reproducir el análisis y reporte en cualquier servidor.
+Usa la carpeta `metabarcoding-code` como tu directorio de proyecto.
