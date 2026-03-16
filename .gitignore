@@ -54,8 +54,9 @@ for_dada2/*
 raw_fastqs/*
 !raw_fastqs/.gitkeep
 
-# metadata/: solo conservar los CSVs de configuración
+# metadata/: solo conservar los CSVs de configuración y la base de taxonomía del curso
 metadata/*.fasta
+!metadata/12S_fish_taxonomy.fasta
 metadata/*.tsv.gz
 metadata/.DS_Store
 
