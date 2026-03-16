@@ -1,11 +1,22 @@
 docs/
-final_data/
 
 scripts/Report_files/
 
-final_data/fastqc/
+# Ignorar contenido de final_data/ pero conservar estructura (.gitkeep)
+final_data/*.RData
+final_data/*.DS_Store
 
-final_data/fastqc_trimmed/
+final_data/fastqc/*
+!final_data/fastqc/.gitkeep
+
+final_data/fastqc_trimmed/*
+!final_data/fastqc_trimmed/.gitkeep
+
+final_data/figs_families_stacked/*
+!final_data/figs_families_stacked/.gitkeep
+
+final_data/figs_species_stacked/*
+!final_data/figs_species_stacked/.gitkeep
 
 .Rproj.user/*
 !.Rproj.user/.gitkeep
