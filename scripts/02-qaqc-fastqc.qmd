@@ -65,24 +65,19 @@ for f in raw_fastqs/*.fastq; do echo -n "$(basename "$f")   "; expr $(wc -l < "$
 ### Crear directorios y correr fastqc
 
 ``` bash
-cd /metabarcoding-code/
-mkdir -p fastqc_reports
-mkdir -p multiqc_reports
-
-fastqc -q -t 4 -o fastqc_reports raw_fastqs/*.fastq
+fastqc -q -t 4 -o final_data/fastqc raw_fastqs/*.fastq
 ```
 
 ### Verificar conteo de reportes
 
 ``` bash
-ls -1 fastqc_reports/*_fastqc.html | wc -l
+ls -1 final_data/fastqc/*_fastqc.html | wc -l
 ```
 
 ### Ejecutar MultiQC (resume todos los FastQC)
 
 ``` bash
-multiqc fastqc_reports -o multiqc_reports
-# Reporte en multi_qc
+multiqc final_data/fastqc -o final_data/multiqc
 ```
 
 ### 4. Revisión de resultados
@@ -93,16 +88,15 @@ multiqc fastqc_reports -o multiqc_reports
 
 ``` bash
 # Indica la ubicación de descarga en tu computadora
-scp CMetaXX@serverIP:/home/CMetaXX/metabarcoding-code/multiqc_reports/multiqc_report.html ~/Downloads/
+scp usrXX@200.23.162.240:/home/usrXX/metabarcoding-code/final_data/multiqc/multiqc_report.html ~/Downloads/
 
 open ~/Downloads/multiqc_report.html
 ```
 
-**Transferir toda la carpeta (si quieres conservar los .zip FastQC):**
+**Transferir toda la carpeta FastQC:**
 
 ``` bash
-scp -r user@server:/ruta/proyecto/final_data/fastqc ~/fastqc_local/
-open ~/fastqc_local/multiqc_report.html
+scp -r usrXX@200.23.162.240:/home/usrXX/metabarcoding-code/final_data/fastqc ~/fastqc_local/
 ```
 
 | **Tips de revisión en MultiQC:**
@@ -186,12 +180,14 @@ bash scripts/cutadapt.sh
 ### 6. Revisión de resultados
 
 ``` bash
-mkdir -p fastqc_reports/fastqc_trimmed
-mkdir -p multiqc_reports/fastqc_trimmed
+fastqc -q -t 4 -o final_data/fastqc_trimmed for_dada2/*.fastq
+multiqc final_data/fastqc_trimmed -o final_data/multiqc_trimmed
+```
 
-fastqc -q -t 4 -o fastqc_reports/fastqc_trimmed for_dada2/*.fastq
-multiqc fastqc_reports/fastqc_trimmed -o multiqc_reports/fastqc_trimmed
-# Descarga en tu computadora con scp: final_data/fastqc_trimmed/multiqc_report.html
+**Descarga el reporte:**
+
+``` bash
+scp usrXX@200.23.162.240:/home/usrXX/metabarcoding-code/final_data/multiqc_trimmed/multiqc_report.html ~/Downloads/
 ```
 
 | **Notas del script**

@@ -48,6 +48,12 @@ final_data/rdata_output/*
 final_data/reference_db/*
 !final_data/reference_db/.gitkeep
 
+final_data/multiqc/*
+!final_data/multiqc/.gitkeep
+
+final_data/multiqc_trimmed/*
+!final_data/multiqc_trimmed/.gitkeep
+
 for_dada2/*
 !for_dada2/.gitkeep
 
