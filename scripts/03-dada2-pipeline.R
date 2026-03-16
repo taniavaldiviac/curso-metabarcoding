@@ -1,15 +1,16 @@
 # dada2 QAQC 
 # Metabarcoding en comunidades de eucariontes
 
-## Set up reproducible environment -------------------------------------------------------
+## 
 # Auto-activar renv (útil cuando se ejecuta con Rscript en servidores sin RStudio)
 if (file.exists(file.path("renv","activate.R"))) {
   source(file.path("renv","activate.R"))
 }
+renv::status()
 
 # Cargamos librerías necesarias. Cada una se usa en distintas partes del pipeline.
-library(dada2)     # pipeline principal para denoising
-library(tidyverse) # manipulación de datos (incluye readr)
+library(dada2, quietly = TRUE)     # pipeline principal
+library(tidyverse, quietly = TRUE) # manipulación de datos (incluye readr)
 library(seqinr)    # utilidades FASTA/FASTA
 library(ShortRead) # lectura/QA de FASTQ
 library(digest)    # generación de hashes SHA1 para ASVs
@@ -32,6 +33,8 @@ message("Proyecto detectado en: ", proj_root)
 # Esto es útil para código que no usa here() internamente y para Rscript
 setwd(proj_root)
 message("Working directory fijado a: ", proj_root)
+#getwd()
+here::here()  # confirmar que here() apunta a la raíz
 
 # Definición de rutas de entrada/salida relativas a la raíz del proyecto
 fastq_location    <- file.path(proj_root, "for_dada2")   # entrada: FASTQ sin procesar
@@ -39,7 +42,7 @@ output_location   <- file.path(proj_root, "final_data")  # salida: logs, csv, rd
 metadata_location <- file.path(proj_root, "metadata")    # metadatos (primer_data.csv, dbs, known_hashes)
 primer_csv       <- file.path(metadata_location, "primer_data.csv") # tabla de parámetros por locus/primer  
 i <- 1  # índice de fila en primer_data.csv para procesar (cambiar si se desea)
-run_name <- "13112025" # identificador de la corrida (cambiar por fecha/ID si se desea)
+run_name <- "26112025" # identificador de la corrida (cambiar por fecha/ID si se desea)
 
 # Leer tabla de parámetros por locus/primer de forma robusta y validar columnas
 # Leer primer_data asegurando que las dos primeras columnas son character
@@ -229,17 +232,55 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
       stop("truncLen_R muy bajo o NA (", where_trim_all_Rs, "). Revisa calidad de Reverse.")
     }
     
+    # Agregar ANTES de filterAndTrim:
+    # Verificar presencia de primers en las primeras lecturas
+    
+    library(Biostrings)
+    
+    check_primers <- function(fastq_file, primer_seq, n = 1000) {
+      streamer <- ShortRead::FastqStreamer(fastq_file, n = n)
+      on.exit(close(streamer))
+      chunk <- ShortRead::yield(streamer)
+      seqs <- as.character(ShortRead::sread(chunk))
+      
+      # Buscar primer exacto al inicio
+      exact_match <- sum(grepl(paste0("^", primer_seq), seqs))
+      
+      # Buscar primer en cualquier parte (primeros 50 bp)
+      substr_seqs <- substr(seqs, 1, 50)
+      anywhere_match <- sum(grepl(primer_seq, substr_seqs))
+      
+      list(exact = exact_match, anywhere = anywhere_match, total = length(seqs))
+    }
+    
+    # Verificar (ajusta las secuencias de tus primers)
+    primer_F <- "TTAGATACCCCACTATGC"  # ejemplo 12S
+    primer_R <- "TAGAACAGGCTCCTCTAG"  # ejemplo 12S
+    
+    message("Verificando primers en Forward reads (R1)...")
+    check_F_in_R1 <- check_primers(fnFs[1], primer_F)
+    check_R_RC_in_R1 <- check_primers(fnFs[1], as.character(Biostrings::reverseComplement(Biostrings::DNAString(primer_R))))
+    
+    message("Verificando primers en Reverse reads (R2)...")
+    check_R_in_R2 <- check_primers(fnRs[1], primer_R)
+    check_F_RC_in_R2 <- check_primers(fnRs[1], as.character(Biostrings::reverseComplement(Biostrings::DNAString(primer_F))))
+    
+    message("\n=== Resultados ===")
+    message("R1 (Forward): Primer F al inicio: ", check_F_in_R1$exact, "/", check_F_in_R1$total)
+    message("R1 (Forward): Primer R-RC al inicio: ", check_R_RC_in_R1$exact, "/", check_R_RC_in_R1$total)
+    message("R2 (Reverse): Primer R al inicio: ", check_R_in_R2$exact, "/", check_R_in_R2$total)
+    message("R2 (Reverse): Primer F-RC al inicio: ", check_F_RC_in_R2$exact, "/", check_F_RC_in_R2$total)
+    
     # Ejecutar filterAndTrim con manejo de errores
     out <- tryCatch({
       filterAndTrim(
-        fnFs, filtFs, fnRs, filtRs, 
-        truncLen = c(where_trim_all_Fs, where_trim_all_Rs),
+        fnFs, filtFs, fnRs, filtRs,
+        truncLen = c(65, 65),
         maxN = 0,           # elimina lecturas con Ns
         maxEE = c(2, 2),    # máximo 2 errores esperados por lectura
-        truncQ = 2,         # trunca lecturas con Q < 2
         rm.phix = TRUE,     # remueve PhiX (control Illumina)
         compress = TRUE,    # comprime FASTQs filtrados (ahorra espacio)
-        multithread = TRUE, # paraleliza por núcleo
+        multithread = 4, # paraleliza por núcleo
         matchIDs = TRUE     # asegura pareado F/R por ID
       )
     }, error = function(e) {
@@ -506,104 +547,10 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
     
     message("Gráficos de modelos de error guardados en logs/")
     
-    # Diagnóstico rápido: tasas de error promedio por transición
-    # errF$err_out es una matriz [16 transiciones × 41 Q-scores]
-    # Los nombres de transiciones están en rownames, no en errF$trans
-    
-    if (!is.null(errF) && is.matrix(errF$err_out)) {
-      # Obtener nombres de transiciones (filas de la matriz)
-      transition_names <- rownames(errF$err_out)
-      
-      if (is.null(transition_names)) {
-        warning("errF$err_out no tiene nombres de fila. No se puede calcular resumen de errores.")
-        err_summary_F <- data.frame(
-          Direction = "Forward",
-          A2C = NA, A2G = NA, A2T = NA, C2A = NA,
-          stringsAsFactors = FALSE
-        )
-      } else {
-        # Calcular promedio por fila (transición) excluyendo transiciones correctas (A2A, C2C, etc.)
-        # Promediamos a través de todos los Q-scores (columnas)
-        err_summary_F <- data.frame(
-          Direction = "Forward",
-          A2C = if("A2C" %in% transition_names) mean(errF$err_out["A2C", ], na.rm = TRUE) else NA,
-          A2G = if("A2G" %in% transition_names) mean(errF$err_out["A2G", ], na.rm = TRUE) else NA,
-          A2T = if("A2T" %in% transition_names) mean(errF$err_out["A2T", ], na.rm = TRUE) else NA,
-          C2A = if("C2A" %in% transition_names) mean(errF$err_out["C2A", ], na.rm = TRUE) else NA,
-          C2G = if("C2G" %in% transition_names) mean(errF$err_out["C2G", ], na.rm = TRUE) else NA,
-          C2T = if("C2T" %in% transition_names) mean(errF$err_out["C2T", ], na.rm = TRUE) else NA,
-          G2A = if("G2A" %in% transition_names) mean(errF$err_out["G2A", ], na.rm = TRUE) else NA,
-          G2C = if("G2C" %in% transition_names) mean(errF$err_out["G2C", ], na.rm = TRUE) else NA,
-          G2T = if("G2T" %in% transition_names) mean(errF$err_out["G2T", ], na.rm = TRUE) else NA,
-          T2A = if("T2A" %in% transition_names) mean(errF$err_out["T2A", ], na.rm = TRUE) else NA,
-          T2C = if("T2C" %in% transition_names) mean(errF$err_out["T2C", ], na.rm = TRUE) else NA,
-          T2G = if("T2G" %in% transition_names) mean(errF$err_out["T2G", ], na.rm = TRUE) else NA,
-          stringsAsFactors = FALSE
-        )
-        
-        message("Transiciones Forward disponibles: ", paste(transition_names, collapse = ", "))
-      }
-    } else {
-      err_summary_F <- data.frame(
-        Direction = "Forward",
-        A2C = NA, A2G = NA, A2T = NA, C2A = NA,
-        stringsAsFactors = FALSE
-      )
-      warning("errF$err_out no es una matriz. No se puede calcular resumen de errores Forward.")
-    }
-    
-    if (!is.null(errR) && is.matrix(errR$err_out)) {
-      transition_names <- rownames(errR$err_out)
-      
-      if (is.null(transition_names)) {
-        warning("errR$err_out no tiene nombres de fila. No se puede calcular resumen de errores.")
-        err_summary_R <- data.frame(
-          Direction = "Reverse",
-          A2C = NA, A2G = NA, A2T = NA, C2A = NA,
-          stringsAsFactors = FALSE
-        )
-      } else {
-        err_summary_R <- data.frame(
-          Direction = "Reverse",
-          A2C = if("A2C" %in% transition_names) mean(errR$err_out["A2C", ], na.rm = TRUE) else NA,
-          A2G = if("A2G" %in% transition_names) mean(errR$err_out["A2G", ], na.rm = TRUE) else NA,
-          A2T = if("A2T" %in% transition_names) mean(errR$err_out["A2T", ], na.rm = TRUE) else NA,
-          C2A = if("C2A" %in% transition_names) mean(errR$err_out["C2A", ], na.rm = TRUE) else NA,
-          C2G = if("C2G" %in% transition_names) mean(errR$err_out["C2G", ], na.rm = TRUE) else NA,
-          C2T = if("C2T" %in% transition_names) mean(errR$err_out["C2T", ], na.rm = TRUE) else NA,
-          G2A = if("G2A" %in% transition_names) mean(errR$err_out["G2A", ], na.rm = TRUE) else NA,
-          G2C = if("G2C" %in% transition_names) mean(errR$err_out["G2C", ], na.rm = TRUE) else NA,
-          G2T = if("G2T" %in% transition_names) mean(errR$err_out["G2T", ], na.rm = TRUE) else NA,
-          T2A = if("T2A" %in% transition_names) mean(errR$err_out["T2A", ], na.rm = TRUE) else NA,
-          T2C = if("T2C" %in% transition_names) mean(errR$err_out["T2C", ], na.rm = TRUE) else NA,
-          T2G = if("T2G" %in% transition_names) mean(errR$err_out["T2G", ], na.rm = TRUE) else NA,
-          stringsAsFactors = FALSE
-        )
-        
-        message("Transiciones Reverse disponibles: ", paste(transition_names, collapse = ", "))
-      }
-    } else {
-      err_summary_R <- data.frame(
-        Direction = "Reverse",
-        A2C = NA, A2G = NA, A2T = NA, C2A = NA,
-        stringsAsFactors = FALSE
-      )
-      warning("errR$err_out no es una matriz. No se puede calcular resumen de errores Reverse.")
-    }
-    
-    err_summary <- rbind(err_summary_F, err_summary_R)
-    write.csv(err_summary,
-              file.path(output_location, "logs",
-                        paste0(run_name, "_", primer.data$locus_shorthand[i], "_error_rates_summary.csv")),
-              row.names = FALSE)
-    
-    message("\n=== Resumen de tasas de error (promedio) ===")
-    print(err_summary)
-    message("CSV guardado en logs/")
-    
     
     ### Inferencia de muestras -------------------------------------------------------
     # Inferimos ASVs usando las tasas de error aprendidas
+    
     dadaFs <- dada(derepFs, err = errF, multithread = TRUE)
     dadaRs <- dada(derepRs, err = errR, multithread = TRUE)
     

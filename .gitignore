@@ -39,12 +39,12 @@ for_dada2/*
 raw_fastqs/*
 !raw_fastqs/.gitkeep
 
-metadata/name2taxid_cache_12S.tsv.gz
-metadata/FullLineage_12S.fasta
-metadata/All_Chordata_12S_Amplicon_plus_Mitogenomes.fasta
-metadata/acc2tax_cache_12S.tsv.gz
-metadata/acc2org_cache_12S.tsv.gz
-metadata/12S_fish_taxonomy_original.fasta
-metadata/Amplicons_12S_virtualPCR_raw.fasta
+# metadata/: solo conservar los CSVs de configuración
+metadata/*.fasta
+metadata/*.tsv.gz
+metadata/.DS_Store
+
+# scripts/metadata/: carpeta de trabajo, no incluir
+scripts/metadata/
 scripts/Report.html
 .Rproj.user

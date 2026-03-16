@@ -315,8 +315,8 @@ cat("Total amplicones (F&R): ", length(amp_both_set),
 ```{r}
 #40,384
 fasta_file <- file.path(metadata_location, sprintf("Amplicons_%s_virtualPCR_raw.fasta", locus_name))
-Biostrings::writeXStringSet(amplicons, amplicons_raw_fa)
-message("Amplicones (crudo) escrito en: ", amplicons_raw_fa)
+Biostrings::writeXStringSet(amplicons, fasta_file)
+message("Amplicones (crudo) escrito en: ", fasta_file)
 ```
 
 **Renombrar con “Especie\|Accession” usando entrez_summary por lotes**
@@ -411,7 +411,7 @@ esummary_batch_urls <- function(ids, max_chars = 1400L, sleep = NCBI_SLEEP_SEC) 
   dplyr::bind_rows(out_rows) %>% dplyr::distinct(accession, .keep_all = TRUE)
 }
 # --- caché local para anotaciones NCBI ---
-acc2org_cache_path <- file.path(out_dir, sprintf("acc2org_cache_%s.tsv.gz", locus_name))
+acc2org_cache_path <- file.path(metadata_location, sprintf("acc2org_cache_%s.tsv.gz", locus_name))
 
 load_acc2org_cache <- function(path = acc2org_cache_path) {
   if (!file.exists(path)) return(tibble::tibble(accession = character(), organism = character()))

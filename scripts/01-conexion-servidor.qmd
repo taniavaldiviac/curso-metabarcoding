@@ -139,5 +139,4 @@ quarto render scripts/Bienvenidos.qmd
 
 | **Recuerda**
 | Usa la carpeta `metabarcoding-code` como tu proyecto.
-| Activa ambiente `r-bio` con conda\
-  Sigue estos pasos para reproducir el análisis y reporte en cualquier servidor.
+| Activa ambiente `r-bio` con conda  Sigue estos pasos para reproducir el análisis y reporte en cualquier servidor.
