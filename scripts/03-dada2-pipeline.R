@@ -313,7 +313,14 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
                         paste0(run_name, "_", primer.data$locus_shorthand[i], "_filterAndTrim_stats.csv")),
               row.names = TRUE)
     message("Estadísticas de filtrado guardadas en logs/")
-    
+
+    # Checkpoint 1: guardar estado después de filterAndTrim
+    save(out, filtFs, filtRs, fnFs, fnRs, sample.names, primer.data, run_name,
+         fastq_location, output_location, metadata_location,
+         file = file.path(output_location, "rdata_output",
+                          paste0(run_name, "_", primer.data$locus_shorthand[i], "_checkpoint1_filterAndTrim.RData")))
+    message("Checkpoint 1 guardado (filterAndTrim)")
+
     ### Dereplicación ----------------------------------------------------------------
     # La dereplicación identifica secuencias únicas en cada muestra y mantiene un
     # registro de su abundancia. Esto reduce redundancia y optimiza pasos posteriores.
@@ -540,13 +547,27 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
     dev.off()
     
     message("Gráficos de modelos de error guardados en logs/")
-    
-    
+
+    # Checkpoint 2: guardar estado después de learnErrors
+    save(errF, errR, derepFs, derepRs, filtFs, filtRs, sample.names, primer.data, run_name, out,
+         fastq_location, output_location, metadata_location,
+         file = file.path(output_location, "rdata_output",
+                          paste0(run_name, "_", primer.data$locus_shorthand[i], "_checkpoint2_learnErrors.RData")))
+    message("Checkpoint 2 guardado (learnErrors)")
+
+
     ### Inferencia de muestras -------------------------------------------------------
     # Inferimos ASVs usando las tasas de error aprendidas
-    
+
     dadaFs <- dada(derepFs, err = errF, multithread = TRUE)
     dadaRs <- dada(derepRs, err = errR, multithread = TRUE)
+
+    # Checkpoint 3: guardar estado después de dada()
+    save(dadaFs, dadaRs, derepFs, derepRs, errF, errR, sample.names, primer.data, run_name, out,
+         fastq_location, output_location, metadata_location,
+         file = file.path(output_location, "rdata_output",
+                          paste0(run_name, "_", primer.data$locus_shorthand[i], "_checkpoint3_dada.RData")))
+    message("Checkpoint 3 guardado (dada)")
     
     ### Unión de pares (merge) ------------------------------------------------------
     
