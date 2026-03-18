@@ -36,7 +36,7 @@ output_location   <- file.path(proj_root, "final_data")  # salida: logs, csv, rd
 metadata_location <- file.path(proj_root, "metadata")    # metadatos (primer_data.csv, dbs, known_hashes)
 primer_csv       <- file.path(metadata_location, "primer_data.csv") # tabla de parámetros por locus/primer  
 i <- 1  # índice de fila en primer_data.csv para procesar (cambiar si se desea)
-run_name <- "26112025" # identificador de la corrida (cambiar por fecha/ID si se desea)
+run_name <- format(Sys.time(), "%Y%m%d_%H%M") # fecha y hora de inicio de la corrida
 
 # Leer tabla de parámetros por locus/primer de forma robusta y validar columnas
 # Leer primer_data asegurando que las dos primeras columnas son character
