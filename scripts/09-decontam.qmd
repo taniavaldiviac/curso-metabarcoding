@@ -1,0 +1,174 @@
+---
+title: "Decontam"
+author: "Miguel Martinez Mercado | marmigues@gmail.com"  
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    toc-location: left
+execute:
+  echo: true
+  warning: false
+  message: false
+  eval: false
+  include: true
+---
+
+El paquete `decontam` provee métodos estadísticos sencillos para la identificación y visualización de secuencias contaminantes en datos de secuenciación masiva de genes marcadores.
+
+El paquete se puede encontrar en el [github decontam](https://github.com/benjjneb/decontam)
+
+Este ejercicio es adaptado de [Introduction to decontam](https://benjjneb.github.io/decontam/vignettes/decontam_intro.html)
+
+## Datos que se necesitan
+
+1. **Tabla de conteo** de ASVs o OTUs. Por ejemplo una tabla de abundancias relativas de ASVs (columnas) en varias muestras (renglones).
+2. **Tabla de metadatos** con:
+  - 2.A La **cuantificación** de la concentración de DNA en cada muestra (posterior a la amplificacion del marcador de interes). El método de cuantificación debe ser por fluorescencia o por qPCR.
+  - 2.B. Datos de secuenciación de **controles negativos**. De preferencia *controles de extracción*, es decir, muestras *sin ADN* que se procesaron a la par de muestras experimentales.
+
+El formato más sencillo para trabajar estos datos es un objeto `phyloseq`.
+
+## Preparación del espacio de trabajo
+
+Comenzamos cargando los paquetes con las funciones de interés.
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(decontam)
+```
+
+Se utilizará un objeto `phyloseq` con una tabla de 1951 ASVs y 569 muestras.
+```{r}
+ps <- readRDS(system.file("extdata", "MUClite.rds", package="decontam"))
+ps
+```
+
+La tabla de metadatos contiene dos columnas con los datos de interés:
+
+* La columna `quant_reading` contiene el valor de la concentración de ADN.
+* La columna `Sample_or_Control` indica cuáles muestras son experimentales y cuales son controles.
+```{r}
+head(sample_data(ps))
+
+# Revisar estadísticos básicos de la cuantificación
+summary(get_variable(ps, quant_reading))
+
+# Tipos de muestras
+table(get_variable(ps, Sample_or_Control))
+```
+
+Revisar cuántas lecturas hay en cada muestra. 
+```{r}
+# Extraer los metadatos
+df <- as.data.frame(sample_data(ps))
+# Agregar una columna con el total de lecturas por muestra
+df$LibrarySize <- sample_sums(ps)
+# Ordenar la tabla por número de lecturas
+df <- df[order(df$LibrarySize),]
+# Agregar una columna que define el orden de la muestra
+df$Index <- seq(nrow(df))
+# Graficar
+ggplot(data=df, aes(x=Index, y=LibrarySize, color=Sample_or_Control)) + geom_point()
+```
+Podemos notar que la mayoría de las muestras `experimentales` tienen mas de 10,000 lecturas. Mientras las muestras `control` tienen menos de 10,000 lecturas
+
+
+## Detección de contaminantes por frecuencia
+
+El primer método se basa en la distribución de la `frecuencia` de cada ASV en función de la cantidad de ADN que se utilizó.
+```{r}
+# La funcion 'isContaminant' es muy sencilla de usar
+contamdf.freq <- isContaminant(ps, method="frequency", conc="quant_reading")
+# El primer argumento es el objeto phyloseq
+# El segundo argumento define el método
+# En el tercer argumento indicamos cuál columna contiene la cuantificación de ADN
+head(contamdf.freq)
+```
+El resultado es un `data.frame` con varias columnas.
+La columna `contaminant` indica con valores lógicos, el resultado para cada ASV.
+El umbral para definir que una ASV es contaminante es `0.1`.
+Y puede modificarse usando el argumento `threshold`.
+
+```{r}
+# ¿Cuantos contaminantes se detectaron?
+table(contamdf.freq$contaminant)
+```
+```{r}
+# Obtener el índice de los primeros contaminantes
+head(which(contamdf.freq$contaminant))
+```
+Se identificaron 58 contaminantes de 1951.
+
+**¿Cómo se ve un contaminante?**  
+Se puede graficar la `frecuencia` de dos ASVs para observar las diferencias.
+Seleccionamos el `ASV1` (`seq1`, no contaminante) y el `ASV3` (`seq3`) identificado como contaminante.
+```{r}
+plot_frequency(ps, taxa_names(ps)[c(1,3)], conc="quant_reading") + 
+  xlab("DNA Concentration (PicoGreen fluorescent intensity)")
+```
+El gráfico muestra con una línea punteada el modelo de una secuencia *no contaminante*. En una secuencia no contaminante, se espera que su frecuencia sea independiente de la concentración. 
+Por su parte, la línea roja muestra el modelo de una secuencia contaminante. En este caso se espera que la frecuencia sea inversamente proporcional a la concentración de ADN. Es decir, al aumentar la cantidad de ADN, el contaminante disminuirá su frecuencia.
+
+Ahora vamos a graficar otras tres secuencias determinadas como contaminantes.
+```{r}
+set.seed(100)
+plot_frequency(ps, taxa_names(ps)[sample(which(contamdf.freq$contaminant),3)], conc="quant_reading") +
+    xlab("DNA Concentration (PicoGreen fluorescent intensity)")
+```
+
+Eliminar contaminantes se puede hacer con la función `prune_taxa` de `phyloseq`.
+```{r}
+# Objeto inicial
+ps
+# Eliminación
+ps.noncontam <- prune_taxa(!contamdf.freq$contaminant, ps)
+# Verificación
+ps.noncontam
+```
+
+## Detección de contaminantes por Prevalencia
+
+El segundo método es la `prevalencia`. Consiste en comparar la presencia y/o ausencia de cada ASV entre muestras experimentales y controles negativos.
+
+La columna `Sample_or_Control` en los metadatos contiene la información sobre el tipo de muestra. Para efectos prácticos se asignará como `TRUE` a las muestras control.
+```{r}
+# Agregar una columna de valores lógicos según la muestra sea o no Control.
+sample_data(ps)$is.neg <- sample_data(ps)$Sample_or_Control == "Control Sample"
+# Ejecutar identificación de contaminantes
+contamdf.prev <- isContaminant(ps, method="prevalence", neg="is.neg")
+table(contamdf.prev$contaminant)
+```
+```{r}
+head(which(contamdf.prev$contaminant))
+```
+
+Por default, una secuencia se define como contaminante cuando alcanza una probabilidad de 0.1.
+Además, el parámetro `threshold` establece un umbral de prevalencia a comparar entre controles negativos y muestras experimentales.
+```{r}
+# Incrementar el parámetro 'threshold'.
+contamdf.prev05 <- isContaminant(ps, method="prevalence", neg="is.neg", threshold=0.5)
+table(contamdf.prev05$contaminant)
+```
+
+```{r}
+# Convertir tabla a presencia/ausencia
+ps.pa <- transform_sample_counts(ps, function(abund) 1*(abund>0))
+# Separar objetos según tipo de muestra
+ps.pa.neg <- prune_samples(sample_data(ps.pa)$Sample_or_Control == "Control Sample", ps.pa)
+ps.pa.pos <- prune_samples(sample_data(ps.pa)$Sample_or_Control == "True Sample", ps.pa)
+# Hacer un data.frame de prevalencia
+df.pa <- data.frame(pa.pos=taxa_sums(ps.pa.pos), pa.neg=taxa_sums(ps.pa.neg),
+                      contaminant=contamdf.prev$contaminant)
+
+# Graficar
+ggplot(data=df.pa, aes(x=pa.neg, y=pa.pos, color=contaminant)) + geom_point() +
+  xlab("Prevalence (Negative Controls)") + ylab("Prevalence (True Samples)")
+```
+
+Otros métodos disponibles son:
+
+* `combined` Combina la probabilidad de la frecuencia y la prevalencia para calcular Fisher.
+* `minimum` Se usa el mínimo de la probabilidad de la frecuencia y la prevalencia.
+* `either`  Los contaminantes son todos los identificados por frecuencia o prevalencia.
+* `both` Solo son contaminantes si se identifican por ambos métodos.

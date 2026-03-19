@@ -1,0 +1,295 @@
+---
+title: "Introducción a R"
+author: "Miguel Martinez Mercado | marmigues@gmail.com"  
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    toc-location: left
+execute:
+  echo: true
+  warning: false
+  message: false
+  eval: false
+  include: true
+---
+
+# R  
+
+Características de R  
+
+* R es un lenguaje de cómputo
+* Gran poder estadístico y gráfico
+* Software libre
+
+A tomar en cuenta:  
+
+* Curva de aprendizaje pronunciada
+* R es sensible a mayúsculass/minusculas
+
+## 1. Uso general 
+
+Iniciar R, desde la terminal
+```{bash Iniciar}
+R
+
+# El programa inicia con un mensaje como el siguiente:
+R version 4.4.1 (2024-06-14) -- "Race for Your Life"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin20
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+```
+
+El prompt de R es:  
+```{r Prompt}
+>
+```  
+Para efectos prácticos, éstas instrucciones asumen que estas en `R` y no incluyen el símbolo del prompt.
+
+Al escribir código.  
+Uno o varios `#` al inicio de una línea hacen que R ignore el texto que le sigue. 
+Usamos `#` para escribir comentarios y describir el código.
+
+**Uso básico**  
+Si pensamos en R como una calculadora
+```{r Uso general}
+# Podemos sumar
+1 + 1
+#[1] 2
+
+# Otras operaciones:
+# restar '-'
+# multiplicar '*'
+# dividir '/'
+```
+
+A veces (en realidad frecuentemente) podemos equivocarnos. 
+Cuando tecleamos un comando incompleto, el prompt cambia de `>` a `+`.
+```{r Incompletos}
+> max(1,3
++
+
+# No hay de qué preocuparse. Tenemos dos opciones:
+# 1. Podemos completar el comando
++ ,5)
+[1] 5
+
+# 2. Podemos cancelar el comando con `Esc` o con `Ctrl + C`. 
+#     Y recuperar el prompt.
+```
+
+R mantiene un historial de los comandos.
+Podemos acceder al historial con las flechas del cursor arriba y abajo.
+El historial puede servirnos para modificar, corregir y repetir comandos.
+
+Para pedir ayuda sobre las funciones podemos usar:
+```{r Ayuda}
+help(max)
+?max
+```
+
+Una vez que terminamos el trabajo. 
+```{bash}
+# Salir de R
+q()
+# El sistema preguntará si quieres guardar la sesión,
+#   responde según tu interés.
+```
+
+## 2. 
+
+**Paquetes**  
+Cada función esta en un paquete, hay paquetes básicos que se instalan por default.
+Hay paquetes especiales o dedicados que el usuario instala.
+```{r Paquetes}
+# Cargar un paquete para usar sus funciones
+library(stats)
+mean(c(1,3,5))
+
+# Podemos usar una función SIN cargar paquete
+stats::sd(c(1,3,5))
+```
+En el área de bioinformática existe el proyecto
+[Bioconductor](https://www.bioconductor.org/) que desarrolla y comparte software de acceso libre para análisis de datos biológicos.
+
+
+**Variables**  
+Las variables se pueden asignar con el operador `<-`.
+```{r Variables}
+x <- 2
+y <- 3
+
+# Uso de variables en operaciones
+x + y
+[1] 5
+```
+
+**Vectores**
+Solo pueden contener un tipo de dato.
+```{r}
+# Numerico
+z <- c(2,4,6)
+class(z)
+# Caracteres
+h <- c("Hola", "mundo")
+# Logico
+b <- c(TRUE, FALSE, T, F)
+length(z)
+# 3
+
+# Enlistar variables del espacio de trabajo
+ls()
+
+# Eliminar variables
+rm(x)
+# Verificar que eliminamos 'x'
+x
+```
+Recomendaciones para nombrar vairables:
+Usar nombres que reflejen el contenido de la variable
+Se pueden separar palabras con '.' y con '_'
+No usar caracteres especiales
+
+**Comparaciones**  
+```{r Comparaciones}
+a <- 3
+# Comparaciones con operadores
+a == pi # Test for equality
+FALSE
+
+a != pi # Test for inequality
+TRUE
+
+a < pi
+TRUE
+
+a > pi
+FALSE
+
+a <= pi
+TRUE
+
+a >= pi
+FALSE
+```
+## 3. 
+
+**Seleccionar o acceder a elementos de un vector**  
+```{r Acceder vector}
+L <- c("A", "B", "C", "D", "E")
+# Usar el 'parentesis cuadrado' para indexar
+L[3]
+"C"
+
+L[1:3]
+"A" "B" "C"
+
+L[c(1,3,5)]
+"A" "C" "E"
+
+# Seleccion por condicional
+z <- c(2,4,6)
+z > 3
+FALSE  TRUE  TRUE
+# Obtenemos un vector Logico
+
+# Aplicamos condicional dentro de los parentesis cuadrados
+z[z > 3]
+4  6
+```
+
+**Funciones**  
+```{r Funciones}
+# Una funcion para calcular el promedio
+prom <- function(x) sum(x)/length(x)
+# 'prom' - nombre de la funcion
+# 'function' define la funcion
+# 'x' - objeto sobre el que se aplica la funcion
+
+prom(c(2,4,4,6))
+4
+mean(c(2,4,4,6))
+4
+
+# Funciones mas elaboradas pueden contenerse entre corchetes
+prom.long <- function(x) {
+  j <- sum(x)
+  k <- length(x)
+  p <- j/k
+  return(p)
+  }
+# Se calculan 3 valores: j,k,p
+# Se 'regresa' o entrega solo 'p'
+
+prom.long(c(2,4,4,6))
+```
+
+## 4. 
+
+**Directorio de trabajo**  
+```{r Directorio de trabajo}
+# Obtener el directorio de trabajo
+getwd()
+# Definir el directorio de trabajo
+mypath <- "/Ruta/al/directorio/de/interes"
+setwd(mypath)
+
+# Enlistar archivos en directorio de trabajo
+list.files()
+
+# Definir la de ruta de un archivo en partes
+file.path(mypath, "mis_datos.csv")
+```
+
+## 5. Matrices y data.frames
+
+**Matrices**  
+```{r Matrices}
+m1 <- matrix(nrow=4,ncol=2)
+m1
+
+dim(m1)
+nrow(m1)
+ncol(m1)
+
+m1[,1] <- c(1,3,5,7)
+m1[,2] <- c(2,4,6,8)
+m1
+
+colnames(m1) <- c("Nones", "Pares")
+```
+**Data.frames**
+```{r DF}
+
+
+```
+
+## 6. Estructuras de control
+
+```{r If}
+```
+
+```{r if 2}
+```
+
+```{r For}
+```
+
+
+Literatura para continuar  
+* Introduction to R. William Venables (Network Theory Limited)
+* R in a Nutshell. Joseph Adler (O'Reilly)
+* ggplot2: Elegant Graphics for Data Analysis. Hadley Wickham (Springer)
