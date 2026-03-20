@@ -51,6 +51,9 @@ dependencies:
   - r-sqldf
   - r-taxize               # consultas taxonómicas a bases de datos
   - r-rentrez              # acceso a NCBI/Entrez
+  - r-strex                # funciones adicionales para manejo de strings
+  - r-filesstrings         # operaciones con archivos y rutas
+  - r-pandoc               # conversión de documentos desde R
 
   # ── Paquetes Bioconductor via bioconda ──────────────────────────────────
   - bioconductor-dada2     # pipeline principal del curso (ASVs)
