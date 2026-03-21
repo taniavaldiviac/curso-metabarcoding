@@ -25,24 +25,4 @@ metabarcoding-code/
 
 ---
 
-## Primeros pasos
-
-1. Clona el repositorio en el servidor:
-   ```sh
-   git clone https://github.com/taniavaldiviac/metabarcoding-code.git
-   cd ~/metabarcoding-code
-   ```
-
-2. Copia los datos crudos desde el directorio del instructor:
-   ```sh
-   cp /home/tvaldivia/metabarcoding-code-cibnor/raw_fastqs/* ~/metabarcoding-code/raw_fastqs/
-   ```
-
-3. Activa el ambiente conda:
-   ```sh
-   conda activate metabarcoding
-   ```
-
----
-
 Dra. Tania Valdivia Carrillo — CIBNOR
