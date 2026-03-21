@@ -7,7 +7,7 @@ scripts/Report_files/
 
 # Ignorar contenido de final_data/ pero conservar la carpeta
 final_data/*
-!final_data/.gitkeep
+!final_data/README.md
 
 .Rproj.user/
 
