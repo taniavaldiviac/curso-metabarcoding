@@ -8,31 +8,27 @@
 echo "Fecha inicio: `date`"
 echo -e "\n============== PROGRAMAS USADOS ==============\n"
 ## Activar conda 
-source activate metabar
+source activate metabarcoding
 echo -e "\n=== VSEARCH"
 which vsearch
 vsearch -v
 
 # Parametros
-NPROCS=4
-F=G03_fish
-IN=G03_fish_ASV.fasta
+NPROCS=2
+F=otus
+# Input as fasta e.g. fish_ASV.fasta
+IN=fish_ASV.fasta
+# OTU % cutoff. Escala 0.00 a 1.00
+p=$1
 
 # Directorio de trabajo
-WDIR=""
-RNADIR=""
-OUTDIR=""
-
-# Crear directorio para resultados
-mkdir -p $OUTDIR
-cd $OUTDIR
+WDIR="metabacoding-code/otus_vsearch"
+cd $WDIR
 
 # Registro del fasta usado
 echo -e "\nMD5SUM de fasta:"
-md5sum $RNADIR/$IN
+md5sum $WDIR/$IN
 
-# OTU % cutoff
-p=0.97
 
 echo -e "\n============================\n=== Formar $p OTUs"
 # --cluster_fast    cluster sequences after sorting by length
@@ -47,13 +43,12 @@ echo -e "\n============================\n=== Formar $p OTUs"
 # --consout 		output consensos en fasta
 # --uc				output format as uclust
 # --log				write messages, timing and memory info to file
-vsearch --cluster_fast $RNADIR/$IN \
+vsearch --cluster_fast $IN \
 			--fasta_width 0 \
 			--id $p \
 			--strand both \
 			--clusterout_id \
 			--centroids ${F}_${p}_oturep.fasta \
-			--consout ${F}_${p}_cons.fasta \
 			--uc ${F}_${p}.uc \
 			--log ${F}_${p}.log \
 			--threads $NPROCS

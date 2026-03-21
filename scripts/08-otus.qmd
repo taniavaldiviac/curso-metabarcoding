@@ -1,0 +1,292 @@
+---
+title: "OTUs, unidades taxonómicas operacionales"
+author: "Miguel Martinez Mercado | marmigues@gmail.com"  
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    toc-location: left
+    code-fold: false
+    code-summary: "Código"
+execute:
+  echo: true
+  warning: false
+  message: false
+  eval: false
+  include: true
+---
+
+Las ASVs son secuencias únicas. Esto significa que entre dos ASVs puede haber sólo 1 base de diferencia! Esto es un gran poder de resolución. 
+
+Generalmente para dar un sentido biológico a los datos de metabarcoding, asociamos las secuencias a un taxón. En el mejor de los casos al nivel de especie.
+
+Combinando la información anterior podríamos preguntarnos:
+
+* ¿Existe 1 base de diferencia entre secuencias de especies diferentes?
+* ¿Cuál es el impacto en las estimaciones de la diversidad?
+
+El problema de encontrar un parámetro óptimo aglomeración o división (*lumping or splitting*) .
+
+En esta sección utilizaremos el programa `vsearch` ([Torognes et al., 2016](https://doi.org/10.7717/peerj.2584)) para formar `OTUs` (Operational Taxonomic Units) a partir de las secuencias de los `ASVs`.
+Después intergraremos un objeto `phyloseq` con la nueva información y finalmente compararemos la resolución taxonómica de ambas estrategias.
+
+## Agrupamiento de ASVs en OTUs
+
+`vsearch` lo ejecutamos con un script. El parámetro que necesitamos indicar es el porcentaje de agrupación deseado, en escala `0.00` a `1.00`. A continuación el ejemplo con 97%.
+```{bash Ejecutar vsearch}
+#| code-fold: false
+#| code-summary: "Código"
+bash scripts/08-vsearch.sh 0.97
+```
+
+A cada grupo (o cluster) se le asigna una secuencia representante llamada `oturep`.
+
+Como resultado obtendremos tres archivos con terminaciones:
+
+* `_oturep.fasta` - Las secuencias representantes en formato `fasta`.
+* `.uc` - Archivo con la relación de las agrupaciones en formato `uclust` (ver descripción abajo).
+* `.log` - Registro de la ejecución de `vsearch`.
+
+
+---
+
+## Reconstruccion del objeto *phyloseq*
+
+Anteriormente se describió como un objeto `phyloseq` nos ayuda mantener organizada la información de un análisis de metabarcoding. 
+Ahora procesaremos el archivo `uc` para organizar la información de los OTUs en un objeto `phyloseq`.
+
+```{r Cargar paquetes, echo=FALSE}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(tibble)
+library(phyloseq)
+
+```
+
+```{r Definir rutas, echo=FALSE}
+# Definición de rutas usando el root del proyecto
+# here::here() detecta automáticamente la raíz (donde está el .Rproj)
+
+proj_root <- here::here()
+message("Proyecto detectado en: ", proj_root)
+
+# Centraliza rutas aquí
+ruta_otus      <- here::here("otus_vsearch")
+```
+
+### Procesar archivo *uc*
+
+Importar el archivo `uc` a R y hacer sentido de las columnas.
+```{r Parse uc}
+# Archivo UC
+uc_file <- file.path("metabarcoding-code/otus_vsearch/fish_0.97.uc")
+
+# Column names
+uc_names <- c("Type", "clus_ID", "len", "id_pct", "strand", "NA1", "NA2", "aln", "ASV_ID", "centroid")
+
+# Load
+uc.df <- readr::read_tsv(uc_file, id="filename", col_names = uc_names, show_col_types = FALSE) |>
+  select(-filename, -NA1, -NA2) |>
+  filter(!Type %in% "C") |>
+  dplyr::relocate(ASV_ID)
+```
+
+El resultado de `vsearch` lo pedimos en formato [uc](https://www.drive5.com/usearch/manual/opt_uc.html) que corresponde al programa `usearch`. Un set de herramientas muy popular para formación de OTUs.
+
+El archivo consiste en una tabla separada por tabuladores. Hay un renglon por cada secuencia analizada y contiene la siguiente información:
+
+| Columna | Descripción |
+|:-:|:--------------------|
+| 1 | Tipo de secuencia `S`, `H`, `C` o `N` (ver abajo). |
+| 2 | Número de cluster (base 0). |
+| 3 | Longitud de la secuencia (`S`, `N` y `H`) o tamaño de cluster (`C`). |
+| 4 | Para tipo `H`, porcentaje de identidad con el blanco. |
+| 5 | Para tipo `H`, la cadena: `+` o `-` si son nucleotidos; `.` para proteinas. |
+| 6 | Ignorar, deprecado. |
+| 7 | Ignorar, deprecado. |
+| 8 | Alineamiento comprmido o el símbolo `=`. El `=` indica que la secuencia es 100% identica al blanco (columna 10). |
+| 9 | Etiqueta de la secuencia asociada a la línea. |
+| 10 | Etiqueta de la secuencia blanco (solo tipo `H`). `*` es el *oturep*. |
+
+
+Los tipos de secuencia que podemos encontrar son:
+
+| Tipo | Descripción |
+|:-:|:----|
+| H | Hit. En clusters, indica el cluster asignado a la secuencia. |
+| S | Centroide or `oturep` (solo clustering). |
+| C | Cluster record (solo clustering). |
+
+En la siguiente tabla se muestran las primeras cinco lineas de un archivo `uc`.
+Las tres primeras secuencias son `otureps`. La cuarta secuencia es un miembro del cluster `1` cuyo `oturep` es la secuencia `ASV_0002` con la que se parece en 99%.  
+
+**NOTA**: La numeracion de los clusters comienza en cero.  
+
+Ejemplo del contenido de archivo `uc`:
+```{bash}
+S       0       313     *       *       *       *       *       ASV_0001        *
+S       1       313     *       *       *       *       *       ASV_0002        *
+S       2       313     *       *       *       *       *       ASV_0003        *
+H       1       313     99.0    +       0       0       312M    ASV_0004        ASV_0002
+S       3       313     *       *       *       *       *       ASV_0005        *
+```
+
+Entonces el número de `otureps` es equivalente al número de OTUs.  
+```{r}
+# Revisar otureps (type = S)
+table(uc.df$Type)
+```
+
+Del archivo `uc` vamos a extraer en un `data.frame`, la identidad de los `otureps` y el `cluster` que representan.
+```{r}
+# data.frame para identificar otureps
+oturep.df <- uc.df |> filter(Type %in% "S") |> select(clus_ID, ASV_ID)
+
+# Obtener ID de otureps
+oturepID <- oturep.df |> pull(ASV_ID)
+length(oturepID)
+```
+
+
+## Re-construir objeto *phyloseq*
+
+### Objeto *phyloseq* inicial
+
+Este es el objeto que se generó en el flujo de trabajo de `dada2`. De este objeto se exportaron las secuencias de ASVs en formato `fasta`. Tiene informción que nos interesa.
+
+Vamos a cargarlo en R y ver su descripción del contenido.
+```{r Cargar ps inicial}
+# Definir objeto phyloseq inicial
+rdata_in <- file.path()
+load(rdata_in)
+
+ps.asv <- ps_G03.1
+ps.asv
+```
+
+### Subset de *otureps*
+
+Primero hacemos el subset de los elementos de interés para extraer. Es decir, la información correspondiente a los `otureps`. 
+
+```{r Subset ps a otureps}
+# Subset del objeto ps
+ps.sub <- subset_taxa(ps.asv, taxa_names(ps.asv) %in% oturepID)
+ps.sub
+```
+
+Ahora separamos los componentes del objeto `phyloseq`. Queremos:
+```{r Separar secuencias}
+# Las secuencias
+oturep.seq <- refseq(ps.sub)
+length(oturep.seq)
+```
+
+```{r Separar taxonomia}
+# La taxonomia
+oturep.tax <- tax_table(ps.sub)
+head(oturep.tax)
+```
+
+```{r Separar metadatos}
+# Los metadatos
+oturep.md <- sample_data(ps.sub)
+head(oturep.md)
+```
+
+### Colapsar conteos por OTU
+
+El componente que nos falta son los conteos de cada OTU en cada muestra.
+
+La tabla que tenemos es de conteo de ASVs. Por lo que necesitamos agrupar los conteos de las ASVs que conforman cada OTU. Por 'agrupar' nos referimos a sumar las lecturas. 
+
+Usaremos el objeto *phyloseq* inicial del que extraemos el componente `otu_table`. Y revisamos su dimensión.
+```{r Tabla otus}
+# Tabla completa de conteos
+conteos.ini <- data.frame(otu_table(ps.asv), stringsAsFactors = FALSE)
+dim(conteos.ini)
+```
+
+Revisamos también los primeros datos de la tabla:
+```{r Peek conteos inicial}
+conteos.ini[1:3,1:5]
+```
+
+Ahora agregamos la información del identificador de cluster (`clus_ID`) que le corresponde a cada secuencia. Usamos esa información para sumar los conteos de lecturas.
+```{r Sumar conteos por OTU}
+# Formato largo
+conteos.ini.long <- conteos.ini |>
+  rownames_to_column(var = "SampleID") |>
+  pivot_longer(-SampleID, names_to = "ASV_ID", values_to = "conteo")
+# Agregar datos de clusters
+conteos.ini.long <- left_join(conteos.ini.long, uc.df, by = "ASV_ID")
+
+# Agrupar (sumar) conteos por muestra y cluster_ID
+conteos.sum.long <- conteos.ini.long |> group_by(SampleID, clus_ID) |>
+  summarise(conteo_cluster = sum(conteo))
+```
+
+En este momento la tabla contiene `muestras x cluster_ID`. Como lo otros componentes utilizan los identificadores de ASVs (e.g. `ASV100`) vamos a modificar la tabla para generar una matriz que contenga `muestras x ASV_ID`. Y revisamos la dimensión de la matriz.
+```{r Convertir a tabla muestras x otus}
+# Identificar outrep usando el numero de cluster
+conteos.sum.long <- left_join(conteos.sum.long, oturep.df, by="clus_ID")
+
+# Formato de matriz: renglones=muestras, columnas=OTUs
+conteos.sum <- conteos.sum.long |>
+  select(-clus_ID) |>
+  pivot_wider(names_from = ASV_ID, values_from = conteo_cluster, values_fill = 0) |>
+  column_to_rownames(var = "SampleID")
+conteos.sum <- as.matrix(conteos.sum)
+dim(conteos.sum)
+```
+
+Revisamos los primeros datos de la matriz de OTUs:
+```{r Peek conteos otus}
+conteos.sum[1:3,1:5]
+```
+
+Ahora que tenemos todos los elementos vamos a *re-construir* el objeto `phyloseq`, le llamaremos `ps.otu`.
+```{r Construir objeto ps}
+# Componentes
+ASV  <- phyloseq::otu_table(conteos.sum, taxa_are_rows = FALSE)
+TAXA <- phyloseq::tax_table(oturep.tax)
+SEQ  <- phylodeq::refseq(oturep.seq)
+MD   <- phyloseq::sample_data(oturep.md)
+
+# Construir objeto
+ps.otu <- phyloseq::phyloseq(ASV, TAXA, SEQ, MD)
+ps.otu
+```
+
+
+## Comparar resolución taxonómica entre ASVs y OTUs
+
+
+```{r}
+# Extraer tablas de taxonomia
+asv.tax <- data.frame(tax_table(ps.asv), stringsAsFactors = FALSE)
+otu.tax <- data.frame(tax_table(ps.otu), stringsAsFactors = FALSE)  
+
+# Preparar df
+df1 <- data.frame(ASVs = apply(asv.tax, 2, function(x) length(unique(na.omit(x)))),
+                  OTUs = apply(otu.tax, 2, function(x) length(unique(na.omit(x)))),
+                  stringsAsFactors = F)
+# Agregar columnas utiles
+df1 <- rownames_to_column(df1, var = "Nivel") |>
+  pivot_longer(-Nivel, names_to = "Estrategia", values_to = "Conteo") |>
+  mutate(Nivel = factor(Nivel, 
+                        levels = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
+                        ordered = T))
+```
+
+El resultado lo visualizamos en un gráfico del número de taxones obtenido en cada nivel (de `Kingdom` a `Species`), para cada estrategia.
+
+**NOTA** En cada nivel puede haber asignaciones `NA` que cuentan como 1 taxón.
+```{r}
+# Grafico
+ggplot(df1, aes(x=Nivel, y=Conteo, group = Estrategia, color=Estrategia)) +
+  geom_line(linewidth = 1.5, alpha=0.5) +
+  labs(title = "Número de taxones identificados por tipo de análisis",
+       x="", y="Número de taxones")
+```
