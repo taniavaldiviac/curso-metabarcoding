@@ -5,8 +5,9 @@ renv.lock
 
 scripts/Report_files/
 
-# Ignorar todo el contenido de final_data/
-final_data/
+# Ignorar contenido de final_data/ pero conservar la carpeta
+final_data/*
+!final_data/.gitkeep
 
 .Rproj.user/
 
