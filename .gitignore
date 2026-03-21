@@ -12,13 +12,13 @@ final_data/*
 .Rproj.user/
 
 cutadapt_reports/*
-!cutadapt_reports/.gitkeep
+!cutadapt_reports/README.md
 
 for_dada2/*
-!for_dada2/.gitkeep
+!for_dada2/README.md
 
 raw_fastqs/*
-!raw_fastqs/.gitkeep
+!raw_fastqs/README.md
 
 # metadata/: solo conservar los CSVs de configuración
 metadata/metadata_old.csv
