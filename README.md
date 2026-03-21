@@ -14,16 +14,34 @@ Toda la documentación, materiales y guías paso a paso están disponibles en:
 
 ```
 metabarcoding-code/
-├── raw_fastqs/        # Datos crudos (no modificar)
-├── for_dada2/         # FASTQs recortados con Cutadapt
-│   └── filtered/      # FASTQs filtrados por DADA2
-├── final_data/
-│   ├── csv_output/    # Tablas de ASVs y taxonomía
-│   ├── rdata_output/  # Checkpoints .RData
-│   └── logs/          # sessionInfo, gráficas de calidad
-├── metadata/          # primer_data.csv, metadata.csv, bases de datos taxonómicas
-└── scripts/           # Scripts numerados en orden de ejecución
+├── scripts/           # Scripts numerados en orden de ejecución
+├── metadata/          # Archivos de configuración (primers, metadatos, listado de especies)
+├── raw_fastqs/        # Datos crudos — se copian durante el curso desde el servidor
+├── for_dada2/         # FASTQs recortados con Cutadapt (se genera al correr el pipeline)
+├── cutadapt_reports/  # Reportes de Cutadapt (se genera al correr el pipeline)
+├── final_data/        # Resultados del análisis (se genera al correr el pipeline)
+└── environment.yml    # Definición del ambiente conda para reproducibilidad
 ```
+
+---
+
+## Primeros pasos
+
+1. Clona el repositorio en el servidor:
+   ```sh
+   git clone https://github.com/taniavaldiviac/metabarcoding-code.git
+   cd ~/metabarcoding-code
+   ```
+
+2. Copia los datos crudos desde el directorio del instructor:
+   ```sh
+   cp /home/tvaldivia/metabarcoding-code-cibnor/raw_fastqs/* ~/metabarcoding-code/raw_fastqs/
+   ```
+
+3. Activa el ambiente conda:
+   ```sh
+   conda activate metabarcoding
+   ```
 
 ---
 
