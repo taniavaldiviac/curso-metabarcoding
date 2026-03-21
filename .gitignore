@@ -34,3 +34,4 @@ scripts/metadata/
 scripts/00-introR.qmd
 scripts/Report.html
 .Rproj.user
+scripts/.DS_Store
