@@ -1,4 +1,4 @@
-Archivos de configuración que el pipeline lee al inicio de cada análisis.
+Archivos de configuración que el pipeline lee al inicio de cada análisis. El contenido y estructura de estos archivos es fundamental para correr el código del repositorio.
 
 - `primer_data.csv` — Parámetros del marcador genético (primers, longitud del amplicón, base de datos taxonómica)
 - `metadata.csv` — Información de las muestras (sitio, fecha, coordenadas, réplica, nombres de archivo)
