@@ -60,14 +60,14 @@ for_dada2/*
 raw_fastqs/*
 !raw_fastqs/.gitkeep
 
-# metadata/: solo conservar los CSVs de configuración y la base de taxonomía del curso
+# metadata/: solo conservar los CSVs de configuración
 metadata/metadata_old.csv
 metadata/*.fasta
-!metadata/12S_fish_taxonomy.fasta
 metadata/*.tsv.gz
 metadata/.DS_Store
 
-# scripts/metadata/: carpeta de trabajo, no incluir
+# scripts/
 scripts/metadata/
+scripts/00-introR.qmd
 scripts/Report.html
 .Rproj.user
