@@ -14,11 +14,8 @@ final_data/*
 
 .Rproj.user/
 
-cutadapt_reports/*
-!cutadapt_reports/README.md
-
-for_dada2/*
-!for_dada2/README.md
+cutadapt_reports/
+for_dada2/
 
 raw_fastqs/*
 !raw_fastqs/README.md
