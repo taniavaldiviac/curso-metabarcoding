@@ -23,6 +23,7 @@ raw_fastqs/*
 # metadata/: solo conservar los CSVs de configuración
 metadata/metadata_old.csv
 metadata/*.fasta
+!metadata/12S_fish_taxonomy.fasta
 metadata/*.tsv.gz
 metadata/.DS_Store
 
