@@ -73,7 +73,7 @@ for R1 in "${R1_LIST[@]}"; do
   report="${REPORT_DIR}/${sample}_cutadapt.txt"
 
   # Construir argumentos (seguro con set -u)
-  args=( -j "${THREADS}" -g "^${FWD}" -G "^${ADAPTER_R2}" -e "${ERROR_RATE}" -m "${MIN_LEN}" )
+  args=( -j "${THREADS}" -g "^${FWD}" -a "${RC}" -G "^${ADAPTER_R2}" -A "$(revcomp "${FWD}")" -e "${ERROR_RATE}" -m "${MIN_LEN}" )
   if [[ "${DISCARD_UNTRIMMED}" == "1" ]]; then
     args+=( --discard-untrimmed )
   fi
