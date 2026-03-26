@@ -53,7 +53,7 @@ if(!file.exists(primer_csv)) stop("No se encuentra primer_data.csv en: ", primer
     .default = readr::col_guess())))
 
 # Lista de columnas que el script requiere; detener con mensaje claro si faltan
-required_cols <- c("locus_shorthand","F_qual","R_qual","db_name","max_trim")
+required_cols <- c("locus_shorthand","F_qual","R_qual","db_name","max_trim","amplicon_length")
 missing_cols <- setdiff(required_cols, colnames(primer.data))
 if(length(missing_cols) > 0) stop("Faltan columnas en primer_data.csv: ", paste(missing_cols, collapse=", "))
 
@@ -157,6 +157,12 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
       where_trim_all_Rs <- primer.data$max_trim[i]
     }
     
+    # Ajustar por longitud del amplicón: no truncar más allá del amplicón
+    amp_length <- primer.data$amplicon_length[i]
+    where_trim_all_Fs <- min(where_trim_all_Fs, amp_length)
+    where_trim_all_Rs <- min(where_trim_all_Rs, amp_length)
+
+    message("Longitud del amplicón: ", amp_length, " bp")
     message("Puntos de truncamiento finales: F=", where_trim_all_Fs, " | R=", where_trim_all_Rs)
     message("Finished calculating quality trimming length... ", Sys.time())
     
@@ -226,59 +232,21 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
       stop("truncLen_R muy bajo o NA (", where_trim_all_Rs, "). Revisa calidad de Reverse.")
     }
     
-    # Agregar ANTES de filterAndTrim:
-    # Verificar presencia de primers en las primeras lecturas
-    
-    library(Biostrings)
-    
-    check_primers <- function(fastq_file, primer_seq, n = 1000) {
-      streamer <- ShortRead::FastqStreamer(fastq_file, n = n)
-      on.exit(close(streamer))
-      chunk <- ShortRead::yield(streamer)
-      seqs <- as.character(ShortRead::sread(chunk))
-      
-      # Buscar primer exacto al inicio
-      exact_match <- sum(grepl(paste0("^", primer_seq), seqs))
-      
-      # Buscar primer en cualquier parte (primeros 50 bp)
-      substr_seqs <- substr(seqs, 1, 50)
-      anywhere_match <- sum(grepl(primer_seq, substr_seqs))
-      
-      list(exact = exact_match, anywhere = anywhere_match, total = length(seqs))
-    }
-    
-    # Verificar (ajusta las secuencias de tus primers)
-    primer_F <- "TTAGATACCCCACTATGC"  # ejemplo 12S
-    primer_R <- "TAGAACAGGCTCCTCTAG"  # ejemplo 12S
-    
-    message("Verificando primers en Forward reads (R1)...")
-    check_F_in_R1 <- check_primers(fnFs[1], primer_F)
-    check_R_RC_in_R1 <- check_primers(fnFs[1], as.character(Biostrings::reverseComplement(Biostrings::DNAString(primer_R))))
-    
-    message("Verificando primers en Reverse reads (R2)...")
-    check_R_in_R2 <- check_primers(fnRs[1], primer_R)
-    check_F_RC_in_R2 <- check_primers(fnRs[1], as.character(Biostrings::reverseComplement(Biostrings::DNAString(primer_F))))
-    
-    message("\n=== Resultados ===")
-    message("R1 (Forward): Primer F al inicio: ", check_F_in_R1$exact, "/", check_F_in_R1$total)
-    message("R1 (Forward): Primer R-RC al inicio: ", check_R_RC_in_R1$exact, "/", check_R_RC_in_R1$total)
-    message("R2 (Reverse): Primer R al inicio: ", check_R_in_R2$exact, "/", check_R_in_R2$total)
-    message("R2 (Reverse): Primer F-RC al inicio: ", check_F_RC_in_R2$exact, "/", check_F_RC_in_R2$total)
-    
     # Ejecutar filterAndTrim con manejo de errores
     out <- tryCatch({
       filterAndTrim(
         fnFs, filtFs, fnRs, filtRs,
-        truncLen = c(65, 65),
-        maxN = 0,           # elimina lecturas con Ns
-        maxEE = c(2, 2),    # máximo 2 errores esperados por lectura
-        rm.phix = TRUE,     # remueve PhiX (control Illumina)
-        compress = TRUE,    # comprime FASTQs filtrados (ahorra espacio)
-        multithread = 4, # paraleliza por núcleo
-        matchIDs = TRUE     # asegura pareado F/R por ID
+        truncLen    = c(where_trim_all_Fs, where_trim_all_Rs),
+        maxN        = 0,        # elimina lecturas con Ns
+        maxEE       = c(2, 2), # máximo 2 errores esperados por lectura
+        truncQ      = 2,        # trunca si calidad cae por debajo de Q2
+        rm.phix     = TRUE,     # remueve PhiX (control Illumina)
+        compress    = TRUE,     # comprime FASTQs filtrados (ahorra espacio)
+        multithread = 2,        # paraleliza por núcleo
+        matchIDs    = TRUE      # asegura pareado F/R por ID
       )
     }, error = function(e) {
-      stop("Error en filterAndTrim: ", conditionMessage(e), 
+      stop("Error en filterAndTrim: ", conditionMessage(e),
            "\nRevisa que los archivos FASTQ existan y no estén corruptos.")
     })
     
