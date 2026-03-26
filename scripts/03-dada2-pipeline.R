@@ -404,6 +404,7 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
     # Checkpoint 2: guardar estado después de dereplicación
     save(out, filtFs, filtRs, fnFs, fnRs, sample.names, primer.data, run_name,
          fastq_location, output_location, metadata_location,
+         where_trim_all_Fs, where_trim_all_Rs,
          derepFs, derepRs, n_unique_F, total_reads_F, compression_ratio,
          file = file.path(output_location, "rdata_output",
                           paste0(run_name, "_", primer.data$locus_shorthand[i], "_checkpoint2_Dereps.RData")))
