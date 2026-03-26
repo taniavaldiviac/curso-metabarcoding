@@ -224,6 +224,20 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
       dev.off()
       message("Distribución de longitudes guardada. ", Sys.time())
     }
+
+    # Tabla de frecuencias de longitudes
+    freq_F <- as.data.frame(prop.table(table(lengths_F$Length)) * 100)
+    freq_R <- as.data.frame(prop.table(table(lengths_R$Length)) * 100)
+    colnames(freq_F) <- c("longitud_bp", "porcentaje_F")
+    colnames(freq_R) <- c("longitud_bp", "porcentaje_R")
+    freq_tabla <- merge(freq_F, freq_R, by = "longitud_bp", all = TRUE)
+    freq_tabla$porcentaje_F <- round(freq_tabla$porcentaje_F, 2)
+    freq_tabla$porcentaje_R <- round(freq_tabla$porcentaje_R, 2)
+    write.csv(freq_tabla,
+              file.path(output_location, "logs",
+                        paste0(run_name,"_",primer.data$locus_shorthand[i],"_longitudes_frecuencias.csv")),
+              row.names = FALSE)
+    message("Tabla de frecuencias de longitudes guardada.")
     
     ### Filtrado y trimming con dada2 ------------------------------------------------
     message("Starting filter and trim... ", Sys.time())
