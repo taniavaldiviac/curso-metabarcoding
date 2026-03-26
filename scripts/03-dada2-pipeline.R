@@ -400,7 +400,15 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
     
     message("Estadísticas de dereplicación guardadas en logs/")
     message("Dereplicación completada. ", Sys.time())
-    
+
+    # Checkpoint 2: guardar estado después de dereplicación
+    save(out, filtFs, filtRs, fnFs, fnRs, sample.names, primer.data, run_name,
+         fastq_location, output_location, metadata_location,
+         derepFs, derepRs, n_unique_F, total_reads_F, compression_ratio,
+         file = file.path(output_location, "rdata_output",
+                          paste0(run_name, "_", primer.data$locus_shorthand[i], "_checkpoint2_Dereps.RData")))
+    message("Checkpoint 2 guardado (Dereps)")
+
     ### Aprendizaje de modelos de error (forzar convergencia) -----------------------
     # El modelo de error es crítico en dada2: aprende las tasas reales de error de
     # secuenciación (A->C, A->G, etc.) para distinguir variantes biológicas de errores técnicos.
