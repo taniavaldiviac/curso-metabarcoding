@@ -157,62 +157,72 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
       where_trim_all_Rs <- primer.data$max_trim[i]
     }
     
-    # Ajustar por longitud del amplicón: no truncar más allá del amplicón
-    amp_length <- primer.data$amplicon_length[i]
-    where_trim_all_Fs <- min(where_trim_all_Fs, amp_length)
-    where_trim_all_Rs <- min(where_trim_all_Rs, amp_length)
-
-    message("Longitud del amplicón: ", amp_length, " bp")
-    message("Puntos de truncamiento finales: F=", where_trim_all_Fs, " | R=", where_trim_all_Rs)
+    message("Truncamiento por calidad (antes de ajuste): F=", where_trim_all_Fs, " | R=", where_trim_all_Rs)
     message("Finished calculating quality trimming length... ", Sys.time())
-    
-    ### Distribución de longitudes de lecturas (OPCIONAL - diagnóstico) -------------
-    # Este paso es útil para detectar problemas de secuenciación, pero no afecta el pipeline.
-    # Puedes comentarlo si tienes muchas muestras y quieres acelerar el análisis.
-    
-    PLOT_RAW_LENGTHS <- TRUE  # Cambiar a FALSE para saltar este paso
-    
+
+    ### Distribución de longitudes: ajuste empírico del truncamiento ----------------
+    # Las lecturas en for_dada2 no tienen todas la misma longitud: Cutadapt con linked
+    # adapters corta en el primer en 3', y la posición exacta varía por lectura.
+    # filterAndTrim descarta cualquier lectura MÁS CORTA que truncLen, por lo que si
+    # truncLen > longitud_real de algunas lecturas, esas se pierden.
+    # Solución: calcular la distribución real y usar el percentil 5 como truncLen
+    # (retiene ~95% de las lecturas).
+    message("Calculando distribución de longitudes de lecturas... ", Sys.time())
+
+    sample_n_reads <- 100000
+    get_lengths <- function(fq_file, n = sample_n_reads) {
+      streamer <- ShortRead::FastqStreamer(fq_file, n = n)
+      on.exit(close(streamer))
+      chunk <- ShortRead::yield(streamer)
+      if (length(chunk) == 0) return(integer(0))
+      ShortRead::width(ShortRead::sread(chunk))
+    }
+
+    lengths_F <- purrr::map_df(fnFs, ~ {
+      L <- get_lengths(.x)
+      tibble::tibble(ReadType = "Forward", File = basename(.x), Length = L)
+    })
+    lengths_R <- purrr::map_df(fnRs, ~ {
+      L <- get_lengths(.x)
+      tibble::tibble(ReadType = "Reverse", File = basename(.x), Length = L)
+    })
+    lengths_all <- dplyr::bind_rows(lengths_F, lengths_R)
+
+    # Ajustar truncLen al percentil 5 de las longitudes reales
+    p5_F <- as.integer(quantile(lengths_F$Length, 0.05, na.rm = TRUE))
+    p5_R <- as.integer(quantile(lengths_R$Length, 0.05, na.rm = TRUE))
+    where_trim_all_Fs <- min(where_trim_all_Fs, p5_F)
+    where_trim_all_Rs <- min(where_trim_all_Rs, p5_R)
+
+    message("Percentil 5 de longitudes: F=", p5_F, " bp | R=", p5_R, " bp")
+    message("Truncamiento final (calidad + distribución): F=", where_trim_all_Fs, " | R=", where_trim_all_Rs)
+
+    # Graficar distribución (línea roja = truncLen elegido)
+    PLOT_RAW_LENGTHS <- TRUE  # Cambiar a FALSE para saltar el gráfico
     if (PLOT_RAW_LENGTHS) {
-      message("Calculando distribución de longitudes crudas... ", Sys.time())
-      
-      sample_n_reads <- 100000
-      get_lengths <- function(fq_file, n = sample_n_reads) {
-        streamer <- ShortRead::FastqStreamer(fq_file, n = n)
-        on.exit(close(streamer))
-        chunk <- ShortRead::yield(streamer)
-        if (length(chunk) == 0) return(integer(0))
-        ShortRead::width(ShortRead::sread(chunk))
-      }
-      
-      lengths_F <- purrr::map_df(fnFs, ~ {
-        L <- get_lengths(.x)
-        tibble::tibble(ReadType = "Forward",
-                       File = basename(.x),
-                       Length = L)
-      })
-      lengths_R <- purrr::map_df(fnRs, ~ {
-        L <- get_lengths(.x)
-        tibble::tibble(ReadType = "Reverse",
-                       File = basename(.x),
-                       Length = L)
-      })
-      lengths_all <- dplyr::bind_rows(lengths_F, lengths_R)
-      
+      vlines <- data.frame(
+        ReadType   = c("Forward", "Reverse"),
+        xintercept = c(where_trim_all_Fs, where_trim_all_Rs)
+      )
       png(file.path(output_location, "logs",
                     paste0(run_name,"_",primer.data$locus_shorthand[i],"_raw_read_lengths.png")),
-          width = 2000, height = 1200, res=300)
+          width = 2000, height = 1200, res = 300)
       print(
         ggplot2::ggplot(lengths_all, ggplot2::aes(x = Length, fill = ReadType)) +
           ggplot2::geom_histogram(alpha = 0.6, position = "identity", binwidth = 1, color = "black") +
+          ggplot2::geom_vline(data = vlines, ggplot2::aes(xintercept = xintercept),
+                              color = "red", linetype = "dashed", linewidth = 0.8) +
           ggplot2::facet_wrap(~ ReadType, ncol = 1, scales = "free_y") +
-          ggplot2::labs(title = "Distribución de longitudes de lecturas crudas (primeras 100k por archivo)",
-                        x = "Longitud (bp)", y = "Frecuencia") +
+          ggplot2::labs(
+            title    = "Distribución de longitudes de lecturas (primeras 100k por archivo)",
+            subtitle = paste0("Línea roja = truncLen elegido (F=", where_trim_all_Fs,
+                              " | R=", where_trim_all_Rs, ") — lecturas más cortas se descartan"),
+            x = "Longitud (bp)", y = "Frecuencia"
+          ) +
           ggplot2::theme_minimal()
       )
       dev.off()
-      message("Distribución de longitudes crudas guardada. ", Sys.time())
-    } else {
-      message("Saltando análisis de longitudes crudas (PLOT_RAW_LENGTHS = FALSE)")
+      message("Distribución de longitudes guardada. ", Sys.time())
     }
     
     ### Filtrado y trimming con dada2 ------------------------------------------------
