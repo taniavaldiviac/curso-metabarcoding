@@ -854,39 +854,39 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
       dplyr::rename(SampleID = !!id_col) %>%
       tibble::column_to_rownames("SampleID")
     
-    # Alinear con la matriz de abundancias (otu_mat) y validar
-    otu_mat <- if (exists("cleaned.seqtab.nochim")) cleaned.seqtab.nochim else seqtab.nochim
-    storage.mode(otu_mat) <- "integer"
-    
-    smp_in_otu <- rownames(otu_mat)
-    faltan <- setdiff(smp_in_otu, rownames(sample_meta))
-    sobrantes <- setdiff(rownames(sample_meta), smp_in_otu)
+    # Alinear con la matriz de abundancias (asv_mat) y validar
+    asv_mat <- if (exists("cleaned.seqtab.nochim")) cleaned.seqtab.nochim else seqtab.nochim
+    storage.mode(asv_mat) <- "integer"
+
+    smp_in_asv <- rownames(asv_mat)
+    faltan <- setdiff(smp_in_asv, rownames(sample_meta))
+    sobrantes <- setdiff(rownames(sample_meta), smp_in_asv)
     if (length(faltan))   warning("Faltan en metadata (sample_id): ", paste(faltan, collapse = ", "))
     if (length(sobrantes)) message("Sobrantes en metadata (no usados): ", paste(sobrantes, collapse = ", "))
-    
-    sample_meta <- sample_meta[smp_in_otu, , drop = FALSE]
-    
+
+    sample_meta <- sample_meta[smp_in_asv, , drop = FALSE]
+
     # Construir tax_mat desde joined_old_new_taxa
     tax_mat <- joined_old_new_taxa %>%
       dplyr::mutate(Sequence = as.character(Sequence)) %>%
       tibble::column_to_rownames("Sequence") %>%
       as.matrix()
-    
+
     # Guardar insumos para phyloseq (+ track y tablas) en un único .RData
     rdata_path <- file.path(output_location, "rdata_output",
                             paste0(run_name,"_", primer.data$locus_shorthand[i], "_phyloseq_inputs.RData"))
     dir.create(dirname(rdata_path), recursive = TRUE, showWarnings = FALSE)
-    
+
     # Asegurar tipos y coherencia
-    if (!all(colnames(otu_mat) %in% rownames(tax_mat))) {
-      warning("ASVs en otu_mat sin fila en tax_mat.")
+    if (!all(colnames(asv_mat) %in% rownames(tax_mat))) {
+      warning("ASVs en asv_mat sin fila en tax_mat.")
     }
-    storage.mode(otu_mat) <- "integer"
-    if (!all(rownames(otu_mat) %in% rownames(sample_meta))) {
-      warning("Muestras en otu_mat sin metadata.")
+    storage.mode(asv_mat) <- "integer"
+    if (!all(rownames(asv_mat) %in% rownames(sample_meta))) {
+      warning("Muestras en asv_mat sin metadata.")
     }
-    sample_meta <- sample_meta[rownames(otu_mat), , drop = FALSE]
-    
+    sample_meta <- sample_meta[rownames(asv_mat), , drop = FALSE]
+
     track        <- track      # ya creado
     seqtab_raw   <- seqtab.nochim
     seqtab_clean <- cleaned.seqtab.nochim
@@ -901,8 +901,8 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
       max_len    = max_len,
       date       = as.character(Sys.time())
     )
-    
-    save(otu_mat, tax_mat, sample_meta, track,
+
+    save(asv_mat, tax_mat, sample_meta, track,
          seqtab_raw, seqtab_clean,
          taxonomy_df, bootstrap_df, params,
          file = rdata_path, compress = "xz")
