@@ -859,9 +859,22 @@ writeLines(capture.output(sessionInfo()), file.path(output_location, "logs", "se
     storage.mode(asv_mat) <- "integer"
 
     smp_in_asv <- rownames(asv_mat)
+
+    # Alinear rownames de sample_meta con asv_mat usando la columna rename_to.
+    # rename_to tiene el nombre completo del FASTQ ("12S-GC-001-d1_1_S1_L001")
+    # y asv_mat usa una versión simplificada ("12S-GC-001-d1_S1").
+    # NOTA: si sample_id en metadata.csv está vacío, restaurar desde GitHub:
+    #   cd ~/metabarcoding-code && git checkout origin/main -- metadata/metadata.csv
+    if ("rename_to" %in% colnames(sample_meta)) {
+      meta_names <- sub("_L001$", "", sample_meta$rename_to)
+      meta_names <- sub("(d1)_1_(S)", "\\1_\\2", meta_names)
+      rownames(sample_meta) <- meta_names
+      message("Rownames de sample_meta asignados desde rename_to")
+    }
+
     faltan <- setdiff(smp_in_asv, rownames(sample_meta))
     sobrantes <- setdiff(rownames(sample_meta), smp_in_asv)
-    if (length(faltan))   warning("Faltan en metadata (sample_id): ", paste(faltan, collapse = ", "))
+    if (length(faltan))   warning("Faltan en metadata: ", paste(faltan, collapse = ", "))
     if (length(sobrantes)) message("Sobrantes en metadata (no usados): ", paste(sobrantes, collapse = ", "))
 
     sample_meta <- sample_meta[smp_in_asv, , drop = FALSE]
